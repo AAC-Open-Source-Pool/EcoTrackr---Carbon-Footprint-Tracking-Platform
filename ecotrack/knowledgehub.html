@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoTrack - Knowledge Hub</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0435;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    .container {
+      display: flex;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: #100648;
+      padding: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar .profile-pic {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: url('https://via.placeholder.com/50') center/cover;
+      margin: 20px auto;
+    }
+
+    .sidebar ul {
+      list-style: none;
+      margin-top: 30px;
+      padding: 0;
+    }
+
+    .sidebar li {
+      background-color: #00e84a;
+      color: black;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 10px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .sidebar li:hover {
+      transform: scale(1.05);
+      background-color: #24ff64;
+    }
+
+    .logo {
+      color: #00ff80;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 50px;
+    }
+
+    /* Hamburger */
+    .hamburger {
+      font-size: 24px;
+      background: none;
+      border: none;
+      color: white;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      cursor: pointer;
+      z-index: 1100;
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      padding: 30px;
+      margin-left: 0;
+      transition: margin-left 0.3s ease-in-out;
+      width: 100%;
+    }
+
+    .main.shifted {
+      margin-left: 250px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin: 20px 0 10px;
+    }
+
+    .subtitle {
+      color: #ccc;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background-color: #160b45;
+      border-radius: 20px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .card:hover {
+      background-color: #24155d;
+      transform: translateY(-5px);
+    }
+
+    .card svg {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 10px;
+      fill: white;
+    }
+
+    .card p {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .share-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .share-button {
+      background-color: #00e84a;
+      padding: 8px 14px;
+      border-radius: 10px;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .share-button:hover {
+      background-color: #24ff64;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="hamburger" id="toggleSidebar">☰</button>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="profile-pic"></div>
+      <ul>
+        <li>Control center</li>
+        <li>Impact center</li>
+        <li>Rewards</li>
+        <li>Community</li>
+        <li>Settings</li>
+      </ul>
+      <div class="logo">🌱 ECOTRACK</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" id="main">
+      <h1>Knowledge Hub</h1>
+      <p class="subtitle">Learn eco-tips and Knowledge</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 4v16h18V4H3zm16 14H5V6h14v12zM7 8h10v2H7V8zm0 4h6v2H7v-2z"/></svg>
+          <p>Articles</p>
+        </div>
+        <div class="card">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3v18h14V3H5zm12 16H7V5h10v14z"/></svg>
+          <p>Infographics</p>
+        </div>
+        <div class="card">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 16.5l6-4.5-6-4.5v9zM4 3h16v18H4V3z"/></svg>
+          <p>Short videos</p>
+        </div>
+        <div class="card">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 17h2v2h-2v-2zm0-10h2v8h-2V7zm1-7C5.93 0 1 4.93 1 11s4.93 11 11 11 11-4.93 11-11S18.07 0 12 0z"/></svg>
+          <p>Tips of the day</p>
+        </div>
+      </div>
+
+      <div class="share-row">
+        <p>Share your ideas</p>
+        <button class="share-button">🔄</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('main');
+
+    toggleSidebar.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      main.classList.toggle('shifted');
+    });
+  </script>
+
+</body>
+</html>

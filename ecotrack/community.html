@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Community Challenges - EcoTrack</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0435;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+      transition: margin-left 0.3s ease-in-out;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: #100648;
+      padding: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .profile-pic {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: url('https://via.placeholder.com/50') center/cover;
+      margin: 20px auto;
+    }
+
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    .sidebar li {
+      background-color: #00e84a;
+      color: black;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .sidebar li:hover {
+      background-color: #24ff64;
+    }
+
+    .logo {
+      color: #00ff80;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      padding: 30px;
+      margin-left: 0;
+      width: 100%;
+      transition: margin-left 0.3s ease-in-out;
+    }
+
+    .main.shift {
+      margin-left: 250px;
+    }
+
+    .hamburger {
+      font-size: 28px;
+      background: none;
+      border: none;
+      color: white;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1100;
+      cursor: pointer;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-top: 60px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 25px;
+    }
+
+    .challenge {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #160b45;
+      padding: 15px 20px;
+      border-radius: 20px;
+      margin: 10px 0;
+      transition: transform 0.2s ease;
+    }
+
+    .challenge:hover {
+      transform: translateY(-2px);
+      background-color: #221358;
+    }
+
+    .challenge-icon {
+      margin-right: 10px;
+    }
+
+    .join-btn {
+      background-color: #00e84a;
+      color: white;
+      padding: 6px 16px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .join-btn:hover {
+      background-color: #2fff6f;
+    }
+
+    .leaderboard {
+      margin-top: 30px;
+    }
+
+    .leaderboard-item {
+      background-color: #160b45;
+      padding: 14px 20px;
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+
+    @media (max-width: 768px) {
+      .main.shift {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="profile-pic"></div>
+  <ul>
+    <li>Control center</li>
+    <li>Impact center</li>
+    <li>Rewards</li>
+    <li>Community</li>
+    <li>Settings</li>
+  </ul>
+  <div class="logo">🌱 ECOTRACK</div>
+</div>
+
+<!-- Main -->
+<div class="container" id="container">
+  <button class="hamburger" id="toggleSidebar">☰</button>
+
+  <div class="main" id="main">
+    <h1>Community Challenges</h1>
+    <p class="subtitle">Join challenges and compete with friends</p>
+
+    <h2>Ongoing Challenges</h2>
+    <div class="challenge"><div><span class="challenge-icon">🚴‍♂️</span> Cycling</div><button class="join-btn">Join</button></div>
+    <div class="challenge"><div><span class="challenge-icon">🌱</span> Plant trees</div><button class="join-btn">Join</button></div>
+    <div class="challenge"><div><span class="challenge-icon">🧹</span> Clean-up</div><button class="join-btn">Join</button></div>
+
+    <div class="leaderboard">
+      <h2>Friends Leaderboard</h2>
+      <div class="leaderboard-item"><span>Alice</span><span>42 trees</span></div>
+      <div class="leaderboard-item"><span>David</span><span>20 trees</span></div>
+      <div class="leaderboard-item"><span>Sarah</span><span>15 trees</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script>
+  const toggleSidebar = document.getElementById('toggleSidebar');
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main');
+
+  toggleSidebar.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    main.classList.toggle('shift');
+  });
+</script>
+
+</body>
+</html>
