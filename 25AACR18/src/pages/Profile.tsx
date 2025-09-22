@@ -8,8 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { User, Award, BarChart3 } from "lucide-react";
+import { User, Award, BarChart3, Trophy, Medal, Crown, Flame, CalendarClock, Star, Leaf, CheckCircle, Lock } from "lucide-react";
 import { authFetch } from "@/lib/auth";
+import { getEntries, scopedKey } from "@/lib/carbon";
 
 const Profile = () => {
   const [profileData, setProfileData] = useState({
@@ -18,11 +19,13 @@ const Profile = () => {
     location: "",
     bio: "",
     joinDate: "",
+    profilePicture: "",
   });
 
   const [formData, setFormData] = useState({ ...profileData });
 
   const [ecoGoals, setEcoGoals] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   const avatarChoices = [
     "https://api.dicebear.com/7.x/thumbs/svg?seed=Leaf",
     "https://api.dicebear.com/7.x/thumbs/svg?seed=River",
@@ -44,6 +47,7 @@ const Profile = () => {
         setProfileData(data);
         setFormData(data);
         setEcoGoals(data.ecoGoals || []);
+        setActivities(data.activities || []);
       } catch (err) {
         console.error("Error fetching profile:", err);
       } finally {
@@ -136,7 +140,8 @@ const Profile = () => {
             <TabsTrigger value="history">Activity History</TabsTrigger>
           </TabsList>
 
-          {/* PROFILE TAB */}
+          {/* PROFILE TAB */
+          }
           <TabsContent value="profile" className="space-y-6">
             {/* TOP GRID: USER INFO + STATS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -336,6 +341,263 @@ const Profile = () => {
                     Save Changes
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ACHIEVEMENTS TAB */}
+          <TabsContent value="achievements" className="space-y-6">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Trophy className="h-5 w-5 text-yellow-600" />
+                  <span>Your Achievements</span>
+                </CardTitle>
+                <CardDescription>Badges earned from your activity</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const stats = (profileData as any).stats || {};
+                  const pts = stats.totalPoints || 0;
+                  const actions = stats.actionCount || 0;
+                  const quizzes = stats.quizzesCompleted || 0;
+                  const days = (profileData as any).streakDays || 0;
+
+                  const badges: Array<{ key: string; title: string; desc: string; icon: JSX.Element; color: string }>= [];
+                  let carbonStreak = 0;
+                  // Helper to push tiered badges
+                  const tier = (value: number, thresholds: number[]) => thresholds.reduce((lvl, t, i) => (value >= t ? i + 1 : lvl), 0);
+                  const titleWithTier = (base: string, lvl: number) => lvl > 1 ? `${base} ${['I','II','III','IV'][lvl-1]}` : base;
+
+                  // Points tiers
+                  const ptsThresholds = [100, 250, 500, 1000];
+                  const ptsLvl = tier(pts, ptsThresholds);
+                  if (ptsLvl >= 1) badges.push({ key: `pts-${ptsLvl}`, title: titleWithTier('Eco Earner', ptsLvl), desc: `Earned ${ptsThresholds[ptsLvl-1]}+ points`, icon: ptsLvl >= 3 ? <Crown className="h-5 w-5"/> : <Medal className="h-5 w-5"/>, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
+
+                  // Actions tiers
+                  const actThresholds = [10, 20, 50];
+                  const actLvl = tier(actions, actThresholds);
+                  if (actLvl >= 1) badges.push({ key: `act-${actLvl}`, title: titleWithTier('Action Starter', actLvl), desc: `Completed ${actThresholds[actLvl-1]}+ eco actions`, icon: <Award className="h-5 w-5"/>, color: 'bg-blue-50 text-blue-700 border-blue-200' });
+
+                  // Quizzes tiers
+                  const quizThresholds = [1, 5, 10];
+                  const quizLvl = tier(quizzes, quizThresholds);
+                  if (quizLvl >= 1) badges.push({ key: `quiz-${quizLvl}`, title: titleWithTier('Quiz Whiz', quizLvl), desc: `Completed ${quizThresholds[quizLvl-1]}+ quizzes`, icon: <Trophy className="h-5 w-5"/>, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' });
+
+                  // Activity streak (days) single badge remains
+                  if (days >= 7) badges.push({ key: 'streak-7', title: '7-Day Streak', desc: 'Active for 7 consecutive days', icon: <Flame className="h-5 w-5" />, color: 'bg-orange-50 text-orange-700 border-orange-200' });
+
+                  // Quiz Grade badges (per-user, from localStorage quiz:completed::<userId>)
+                  try {
+                    const QUIZ_KEY = scopedKey('quiz:completed');
+                    const raw = localStorage.getItem(QUIZ_KEY);
+                    const map = raw ? (JSON.parse(raw) as Record<string, { score?: number }>) : {};
+                    const scores = Object.values(map).map(v => Number(v?.score) || 0);
+                    const best = scores.length ? Math.max(...scores) : 0;
+                    if (best >= 100) badges.push({ key: 'grade-perfect', title: 'Perfect Score', desc: 'Scored 100% on a quiz', icon: <Star className="h-5 w-5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
+                    else if (best >= 90) badges.push({ key: 'grade-a', title: 'Grade A', desc: 'Scored 90%+ on a quiz', icon: <Star className="h-5 w-5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
+                    else if (best >= 80) badges.push({ key: 'grade-b', title: 'Grade B', desc: 'Scored 80%+ on a quiz', icon: <Star className="h-5 w-5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
+                  } catch {}
+
+                  // Carbon reduction badges (using getEntries per-user)
+                  try {
+                    const entries = getEntries();
+                    if (entries.length >= 2) {
+                      // Today vs Yesterday improvement
+                      const sorted = entries.slice().sort((a,b)=>a.date.localeCompare(b.date));
+                      const last = sorted[sorted.length-1];
+                      const prev = sorted[sorted.length-2];
+                      if (last.value < prev.value) {
+                        badges.push({ key: 'carbon-cutter', title: 'Carbon Cutter', desc: 'Reduced emissions vs previous day', icon: <Leaf className="h-5 w-5" />, color: 'bg-teal-50 text-teal-700 border-teal-200' });
+                      }
+                      // 3-day improvement streak
+                      carbonStreak = 1;
+                      for (let i = sorted.length-1; i>0 && carbonStreak<4; i--) {
+                        if (sorted[i].value < sorted[i-1].value) carbonStreak++; else break;
+                      }
+                      if (carbonStreak >= 3) {
+                        badges.push({ key: 'streak-saver', title: 'Carbon Streak', desc: 'Reduced emissions 3 days in a row', icon: <Flame className="h-5 w-5" />, color: 'bg-rose-50 text-rose-700 border-rose-200' });
+                      }
+                    }
+                  } catch {}
+
+                  return (
+                    <div className="space-y-6">
+                      {badges.length === 0 ? (
+                        <p className="text-sm text-gray-600">No badges yet. Keep learning and tracking to unlock achievements!</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {badges.map(b => (
+                            <div
+                              key={b.key}
+                              className={`border rounded-lg p-4 flex items-start space-x-3 ${b.color} backdrop-blur-sm hover:shadow-lg transition transform hover:-translate-y-0.5`}
+                            >
+                              <div className="shrink-0">{b.icon}</div>
+                              <div>
+                                <div className="font-medium">{b.title}</div>
+                                <div className="text-sm opacity-90">{b.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Next Milestones */}
+                      <div className="space-y-3">
+                        <div className="text-sm font-semibold text-gray-700">Next Milestones</div>
+                        <div className="space-y-3">
+                          {/* Actions toward next level */}
+                          {(() => {
+                            const thresholds = actThresholds;
+                            const next = thresholds.find(t => actions < t) ?? thresholds[thresholds.length-1];
+                            const title = actions < 10 ? 'Action Starter I' : actions < 20 ? 'Action Starter II' : 'Action Starter III';
+                            return (
+                              <div>
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                  <span>Eco Actions</span>
+                                  <span>{actions}/{next} until {title}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress className="flex-1" value={Math.min(100, (Math.min(actions, next)/next)*100)} />
+                                  {Array.from({ length: 3 }).map((_,i) => {
+                                    const earned = actions >= (i===0?10:i===1?20:50);
+                                    return earned ? (
+                                      <Award key={i} className="h-4 w-4 text-blue-600 transition-transform duration-300" title={`Unlocked: ${i===0?'10':i===1?'20':'50'} actions`} />
+                                    ) : (
+                                      <Award key={i} className="h-4 w-4 text-blue-400 opacity-30" title={`Locked: reach ${i===0?'10':i===1?'20':'50'} actions`} />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {/* Points toward next level */}
+                          {(() => {
+                            const thresholds = ptsThresholds;
+                            const next = thresholds.find(t => pts < t) ?? thresholds[thresholds.length-1];
+                            const lvlName = pts < 100 ? 'Eco Earner I' : pts < 250 ? 'Eco Earner II' : pts < 500 ? 'Eco Earner III' : 'Eco Earner IV';
+                            return (
+                              <div>
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                  <span>Points</span>
+                                  <span>{pts}/{next} until {lvlName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress className="flex-1" value={Math.min(100, (Math.min(pts, next)/next)*100)} />
+                                  {Array.from({ length: 4 }).map((_,i) => {
+                                    const thr = i===0?100:i===1?250:i===2?500:1000;
+                                    const earned = pts >= thr;
+                                    const Icon = i>=2 ? Crown : Medal;
+                                    return earned ? (
+                                      <Icon key={i} className="h-4 w-4 text-emerald-600 transition-transform duration-300" title={`Unlocked: ${thr}+ points`} />
+                                    ) : (
+                                      <Icon key={i} className="h-4 w-4 text-emerald-400 opacity-30" title={`Locked: reach ${thr} points`} />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {/* Quizzes toward next level */}
+                          {(() => {
+                            const thresholds = quizThresholds;
+                            const next = thresholds.find(t => quizzes < t) ?? thresholds[thresholds.length-1];
+                            const lvlName = quizzes < 1 ? 'Quiz Whiz I' : quizzes < 5 ? 'Quiz Whiz II' : 'Quiz Whiz III';
+                            return (
+                              <div>
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                  <span>Quizzes</span>
+                                  <span>{quizzes}/{next} until {lvlName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress className="flex-1" value={Math.min(100, (Math.min(quizzes, next)/next)*100)} />
+                                  {Array.from({ length: 3 }).map((_,i) => {
+                                    const thr = i===0?1:i===1?5:10;
+                                    const earned = quizzes >= thr;
+                                    return earned ? (
+                                      <Trophy key={i} className="h-4 w-4 text-yellow-600 transition-transform duration-300" title={`Unlocked: ${thr} quizzes`} />
+                                    ) : (
+                                      <Trophy key={i} className="h-4 w-4 text-yellow-400 opacity-30" title={`Locked: complete ${thr} quizzes`} />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {/* Streak toward 7-Day Streak */}
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Activity Streak</span>
+                              <span>{days}/7 until 7-Day Streak</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Progress className="flex-1" value={Math.min(100, (days/7)*100)} />
+                              {days >= 7 ? (
+                                <Flame className="h-4 w-4 text-orange-600 transition-transform duration-300" title="Unlocked: 7-day streak" />
+                              ) : (
+                                <Flame className="h-4 w-4 text-orange-400 opacity-30" title="Locked: reach 7-day streak" />
+                              )}
+                            </div>
+                          </div>
+                          {/* Carbon reduction streak toward 3 */}
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Carbon Reduction Streak</span>
+                              <span>{Math.min(carbonStreak,3)}/3 until Carbon Streak</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Progress className="flex-1" value={Math.min(100, (Math.min(carbonStreak,3)/3)*100)} />
+                              {Array.from({ length: 3 }).map((_,i) => (
+                                i < carbonStreak ? (
+                                  <Flame key={i} className="h-4 w-4 text-rose-600 transition-transform duration-300" title={`Unlocked: day ${i+1} reduced`} />
+                                ) : (
+                                  <Flame key={i} className="h-4 w-4 text-rose-400 opacity-30" title={`Locked: day ${i+1} reduction`} />
+                                )
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ACTIVITY HISTORY TAB */}
+          <TabsContent value="history" className="space-y-6">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <CalendarClock className="h-5 w-5 text-purple-600" />
+                  <span>Recent Activity</span>
+                </CardTitle>
+                <CardDescription>Track your actions, quizzes and changes over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {activities && activities.length > 0 ? (
+                  <div className="space-y-3">
+                    {activities.slice().reverse().map((a: any, idx: number) => (
+                      <div key={a._id || idx} className="flex items-center justify-between border rounded-lg p-3">
+                        <div>
+                          <div className="font-medium capitalize">{a.type || 'activity'}</div>
+                          <div className="text-sm text-gray-600">{a.description || a.title || '-'}</div>
+                        </div>
+                        <div className="text-right">
+                          {typeof a.points === 'number' && (
+                            <div className={`text-sm font-semibold ${a.points >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {a.points >= 0 ? `+${a.points}` : a.points} pts
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500">{a.date ? new Date(a.date).toLocaleString() : ''}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">No activities yet. Your quiz completions and carbon saves will appear here.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

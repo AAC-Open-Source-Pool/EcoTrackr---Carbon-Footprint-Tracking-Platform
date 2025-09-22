@@ -1,14 +1,15 @@
-
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Award, Gift, ShoppingBag, Coffee, Leaf, Star, QrCode } from "lucide-react";
+import { getPoints, POINTS_EVENT } from "@/lib/carbon";
 
 const Rewards = () => {
-  const [userPoints, setUserPoints] = useState(1247);
+  // Points start at 0 for every user via local storage. Keep in sync with global points.
+  const [userPoints, setUserPoints] = useState<number>(getPoints());
   const [selectedReward, setSelectedReward] = useState<any>(null);
 
   const rewards = [
@@ -20,7 +21,8 @@ const Rewards = () => {
       category: "lifestyle",
       image: "🧴",
       stock: 15,
-      brand: "EcoLife"
+      brand: "EcoLife",
+      price: 999
     },
     {
       id: 2,
@@ -30,7 +32,8 @@ const Rewards = () => {
       category: "lifestyle",
       image: "👜",
       stock: 23,
-      brand: "GreenBag Co."
+      brand: "GreenBag Co.",
+      price: 599
     },
     {
       id: 3,
@@ -40,7 +43,8 @@ const Rewards = () => {
       category: "tech",
       image: "🔋",
       stock: 8,
-      brand: "SolarTech"
+      brand: "SolarTech",
+      price: 2499
     },
     {
       id: 4,
@@ -50,7 +54,8 @@ const Rewards = () => {
       category: "health",
       image: "🪥",
       stock: 30,
-      brand: "BambooCare"
+      brand: "BambooCare",
+      price: 299
     },
     {
       id: 5,
@@ -60,7 +65,8 @@ const Rewards = () => {
       category: "lifestyle",
       image: "📚",
       stock: 12,
-      brand: "Green Kitchen"
+      brand: "Green Kitchen",
+      price: 899
     },
     {
       id: 6,
@@ -70,7 +76,8 @@ const Rewards = () => {
       category: "food",
       image: "☕",
       stock: 50,
-      brand: "EcoCafe Network"
+      brand: "EcoCafe Network",
+      price: 1000
     }
   ];
 
@@ -95,6 +102,25 @@ const Rewards = () => {
     ? rewards 
     : rewards.filter(reward => reward.category === selectedCategory);
 
+  // Discount: for every 200 coins, 1% discount
+  const discountPercent = useMemo(() => {
+    const blocks = Math.floor(userPoints / 200);
+    return Math.max(0, blocks * 1);
+  }, [userPoints]);
+
+  useEffect(() => {
+    // Sync points live with global store
+    const init = () => setUserPoints(getPoints());
+    init();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { points?: number } | undefined;
+      if (detail && typeof detail.points === "number") setUserPoints(detail.points);
+      else init();
+    };
+    window.addEventListener(POINTS_EVENT, handler as EventListener);
+    return () => window.removeEventListener(POINTS_EVENT, handler as EventListener);
+  }, []);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -110,6 +136,7 @@ const Rewards = () => {
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{userPoints}</div>
               <div className="text-sm text-gray-600">Available Points</div>
+              <div className="mt-2 text-xs text-gray-600">Discount: <span className="font-semibold">{discountPercent}%</span> (every 200 coins = 1%)</div>
             </div>
           </Card>
         </div>
@@ -155,6 +182,27 @@ const Rewards = () => {
                     <span className="text-sm font-medium">{reward.points} points</span>
                   </div>
                 </div>
+                {/* Price and Discount */}
+                <div>
+                  <div className="flex items-baseline space-x-2">
+                    <span className="text-sm text-gray-600">Price:</span>
+                    <span className="text-lg font-semibold text-gray-900">₹{reward.price.toFixed(0)}</span>
+                  </div>
+                  {discountPercent > 0 && (
+                    <div className="mt-1 text-sm">
+                      <span className="text-gray-600">After discount:</span>{" "}
+                      {(() => {
+                        const discounted = Math.max(0, reward.price * (1 - discountPercent / 100));
+                        return (
+                          <>
+                            <span className="line-through text-gray-400 mr-2">₹{reward.price.toFixed(0)}</span>
+                            <span className="font-semibold text-emerald-700">₹{discounted.toFixed(0)}</span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button 
@@ -173,6 +221,7 @@ const Rewards = () => {
                       <DialogTitle>Redeem Reward</DialogTitle>
                       <DialogDescription>
                         Are you sure you want to redeem {reward.title} for {reward.points} points?
+                        <div className="mt-2 text-sm text-gray-600">Your current discount: <span className="font-semibold">{discountPercent}%</span> (every 200 coins = 1%)</div>
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col items-center space-y-4 py-4">

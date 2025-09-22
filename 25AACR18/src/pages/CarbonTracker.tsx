@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, Lightbulb, Car, Utensils, BarChart3 } from "lucide-react";
+import { getCooldownRemainingMs, getWeeklyData, saveTodayEmissions, getPoints } from "@/lib/carbon";
 
 const CarbonTracker = () => {
   const [formData, setFormData] = useState({
@@ -24,13 +24,25 @@ const CarbonTracker = () => {
     diet: 0
   });
 
+  // Daily save + weekly chart state
+  const [cooldownMs, setCooldownMs] = useState<number>(0);
+  const [weekly, setWeekly] = useState(getWeeklyData());
+  const [points, setPoints] = useState<number>(getPoints());
+  const [awardMessage, setAwardMessage] = useState<string>("");
+  const [awardPositive, setAwardPositive] = useState<boolean | null>(null);
+  const [now, setNow] = useState<Date>(new Date());
+
   const commuteFactors = {
     car: 0.21, // kg CO2 per km
     bus: 0.08,
     train: 0.06,
+    motorbike: 0.10,
     bike: 0,
     walk: 0
   };
+
+  const timeString = useMemo(() => now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), [now]);
+  const dateString = useMemo(() => now.toLocaleDateString([], { weekday: "short", year: "numeric", month: "short", day: "2-digit" }), [now]);
 
   const dietFactors = {
     meat: 2.5, // kg CO2 per day
@@ -76,14 +88,89 @@ const CarbonTracker = () => {
 
   const maxEmission = Math.max(breakdown.commute, breakdown.electricity, breakdown.diet);
 
+  // Effects
+  useEffect(() => {
+    // Initialize cooldown and weekly data
+    setCooldownMs(getCooldownRemainingMs());
+    setWeekly(getWeeklyData());
+    setPoints(getPoints());
+
+    // Tick cooldown every 30s
+    const id = setInterval(() => {
+      setCooldownMs(getCooldownRemainingMs());
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Live clock
+  useEffect(() => {
+    const tid = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(tid);
+  }, []);
+
+  const formatMs = (ms: number) => {
+    if (ms <= 0) return "";
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  const handleSaveToday = () => {
+    setAwardMessage("");
+    setAwardPositive(null);
+    const res = saveTodayEmissions(totalEmissions);
+    if (!res.saved) {
+      if (res.reason === "cooldown") {
+        setCooldownMs(res.remainingMs || 0);
+      }
+      return;
+    }
+    // Refresh UI state
+    setCooldownMs(getCooldownRemainingMs());
+    setWeekly(getWeeklyData());
+    const newPoints = getPoints();
+    setPoints(newPoints);
+    if (typeof res.awardedPoints === "number" && res.comparison) {
+      if (res.comparison === "improved") {
+        setAwardPositive(true);
+        setAwardMessage(`Great job! Emissions decreased vs yesterday. +${res.awardedPoints} points awarded.`);
+      } else if (res.comparison === "worsened") {
+        setAwardPositive(false);
+        setAwardMessage(`Emissions increased vs yesterday. ${res.awardedPoints} points deducted.`);
+      } else if (res.comparison === "same") {
+        setAwardPositive(false);
+        setAwardMessage(`Emissions unchanged vs yesterday. ${res.awardedPoints} points deducted.`);
+      } else {
+        setAwardPositive(null);
+        setAwardMessage("Saved today's emissions.");
+      }
+    } else {
+      setAwardPositive(null);
+      setAwardMessage("Saved today's emissions.");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center space-x-3">
-          <Calculator className="h-8 w-8 text-green-600" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Carbon Tracker</h1>
-            <p className="text-gray-600">Calculate and monitor your daily carbon footprint</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Calculator className="h-8 w-8 text-green-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Carbon Tracker</h1>
+              <p className="text-gray-600">Calculate and monitor your daily carbon footprint</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-500">{dateString}</div>
+            <div className="text-lg font-semibold tracking-wider text-emerald-700">{timeString}</div>
+            {cooldownMs > 0 && (
+              <div className="text-xs text-gray-500">Next save in {formatMs(cooldownMs)}</div>
+            )}
           </div>
         </div>
 
@@ -110,10 +197,11 @@ const CarbonTracker = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select transport" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent inPortal={false} position="item-aligned" side="bottom" align="start" sideOffset={4} className="z-50">
                         <SelectItem value="car">Car</SelectItem>
                         <SelectItem value="bus">Bus</SelectItem>
                         <SelectItem value="train">Train</SelectItem>
+                        <SelectItem value="motorbike">Motorbike</SelectItem>
                         <SelectItem value="bike">Bicycle</SelectItem>
                         <SelectItem value="walk">Walking</SelectItem>
                       </SelectContent>
@@ -162,7 +250,7 @@ const CarbonTracker = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Select diet type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent inPortal={false} position="item-aligned" side="bottom" align="start" sideOffset={4} className="z-50">
                     <SelectItem value="meat">Meat-based</SelectItem>
                     <SelectItem value="vegetarian">Vegetarian</SelectItem>
                     <SelectItem value="vegan">Vegan</SelectItem>
@@ -170,9 +258,31 @@ const CarbonTracker = () => {
                 </Select>
               </div>
 
-              <Button onClick={calculateEmissions} className="w-full bg-green-600 hover:bg-green-700">
-                Calculate Emissions
-              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button onClick={calculateEmissions} className="w-full bg-green-600 hover:bg-green-700">
+                  Calculate Emissions
+                </Button>
+                <Button
+                  onClick={handleSaveToday}
+                  disabled={totalEmissions <= 0 || cooldownMs > 0}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {cooldownMs > 0 ? `Save available in ${formatMs(cooldownMs)}` : "Save today's emissions"}
+                </Button>
+              </div>
+              {awardMessage && (
+                <div
+                  className={`text-sm rounded-md p-2 border ${
+                    awardPositive === true
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                      : awardPositive === false
+                      ? "text-red-700 bg-red-50 border-red-200"
+                      : "text-slate-700 bg-slate-50 border-slate-200"
+                  }`}
+                >
+                  {awardMessage} Current points: <span className="font-semibold">{points}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -255,6 +365,36 @@ const CarbonTracker = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Weekly Emissions (Mon-Sun) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BarChart3 className="h-5 w-5 text-green-600" />
+              <span>Weekly Emissions</span>
+            </CardTitle>
+            <CardDescription>Saved daily totals for the current week (Mon–Sun)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {weekly.map(d => (
+                <div key={d.date} className="flex items-center space-x-3">
+                  <div className="w-10 text-sm text-gray-600">{d.label}</div>
+                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, (d.value / Math.max(1, Math.max(...weekly.map(w => w.value)))) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="w-16 text-right text-sm font-medium">{d.value.toFixed(1)}kg</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-sm text-gray-700">
+              Current points: <span className="font-semibold text-emerald-700">{points}</span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tips Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

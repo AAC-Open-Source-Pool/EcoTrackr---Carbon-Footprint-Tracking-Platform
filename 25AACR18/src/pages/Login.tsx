@@ -27,12 +27,15 @@ interface GoogleResponse {
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"user" | "organiser">("user");
   const navigate = useNavigate();
+
+const API_BASE = (import.meta as any)?.env?.VITE_API_BASE || "http://localhost:5000";
 
 // ✅ Handle Google login response
 const handleGoogleResponse = async (response: GoogleResponse) => {
   try {
-    const res = await fetch("http://localhost:5000/api/google", {
+    const res = await fetch(`${API_BASE}/api/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ credential: response.credential }), // ✅ FIXED
@@ -41,7 +44,20 @@ const handleGoogleResponse = async (response: GoogleResponse) => {
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem("token", data.token);
-      navigate("/dashboard");
+      localStorage.setItem("auth:role", role);
+      if (data.userId) localStorage.setItem("auth:userId", String(data.userId));
+      // Log login activity (non-blocking)
+      try {
+        await fetch(`${API_BASE}/api/profile/activities`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.token}`,
+          },
+          body: JSON.stringify({ type: "login", date: Date.now(), description: `Signed in as ${role}`, points: 0 }),
+        });
+      } catch {}
+      navigate(role === "user" ? "/dashboard" : "/organiser");
     } else {
       alert(data.message || "Google login failed");
     }
@@ -91,22 +107,36 @@ const handleGoogleResponse = async (response: GoogleResponse) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      let data: any = {};
+      try { data = await response.json(); } catch {}
       if (response.ok) {
         localStorage.setItem("token", data.token);
-        navigate("/dashboard");
+        localStorage.setItem("auth:role", role);
+        if (data.userId) localStorage.setItem("auth:userId", String(data.userId));
+        // Log login activity (non-blocking)
+        try {
+          await fetch(`${API_BASE}/api/profile/activities`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.token}`,
+            },
+            body: JSON.stringify({ type: "login", date: Date.now(), description: `Signed in as ${role}` , points: 0 }),
+          });
+        } catch {}
+        navigate(role === "user" ? "/dashboard" : "/organiser");
       } else {
-        alert(data.message || "Login failed");
+        alert(`Login failed (${response.status}): ${data?.message || "Unknown error"}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error logging in");
+    } catch (err: any) {
+      console.error("Login request failed:", err);
+      alert(`Network error logging in: ${err?.message || err}`);
     }
   };
 
@@ -124,6 +154,29 @@ const handleGoogleResponse = async (response: GoogleResponse) => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role Selector */}
+            <div>
+              <Label>Sign in as</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={role === "user" ? "default" : "outline"}
+                  className={role === "user" ? "bg-green-600 hover:bg-green-700" : ""}
+                  onClick={() => setRole("user")}
+                >
+                  User
+                </Button>
+                <Button
+                  type="button"
+                  variant={role === "organiser" ? "default" : "outline"}
+                  className={role === "organiser" ? "bg-purple-600 hover:bg-purple-700" : ""}
+                  onClick={() => setRole("organiser")}
+                >
+                  Event Organiser
+                </Button>
+              </div>
+            </div>
+
             <Label>Email</Label>
             <Input
               type="email"

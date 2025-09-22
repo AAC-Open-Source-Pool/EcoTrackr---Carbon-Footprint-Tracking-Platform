@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BookOpen, Check, X, Award, Lightbulb, Earth, Star } from "lucide-react";
+import { addPoints, scopedKey } from "@/lib/carbon";
 
 const LearnQuiz = () => {
   const [activeTopic, setActiveTopic] = useState("all");
@@ -15,6 +16,62 @@ const LearnQuiz = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswerChecked, setIsAnswerChecked] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
+  const [completedMap, setCompletedMap] = useState<Record<string, { score: number; completedAt: number }>>({});
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+
+  // storage helpers
+  const COMPLETED_KEY = scopedKey("quiz:completed");
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const loadCompleted = () => {
+    try {
+      const raw = localStorage.getItem(COMPLETED_KEY);
+      const parsed: Record<string, any> = raw ? JSON.parse(raw) : {};
+      // Normalize old entries without completedAt
+      const normalized: Record<string, { score: number; completedAt: number }> = {};
+      Object.keys(parsed || {}).forEach((k) => {
+        const v = parsed[k] || {};
+        normalized[k] = {
+          score: typeof v.score === 'number' ? v.score : 0,
+          completedAt: typeof v.completedAt === 'number' ? v.completedAt : Date.now()
+        };
+      });
+      return normalized;
+    } catch {
+      return {};
+    }
+  };
+  const saveCompleted = (map: Record<string, { score: number; completedAt: number }>) => {
+    try { localStorage.setItem(COMPLETED_KEY, JSON.stringify(map)); } catch {}
+  };
+  useEffect(() => { setCompletedMap(loadCompleted()); }, []);
+  // live ticker for countdown (re-render every second)
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const canAttempt = (quizId: string | number) => {
+    const rec = completedMap[String(quizId)];
+    if (!rec) return true;
+    return Date.now() - rec.completedAt >= COOLDOWN_MS;
+  };
+
+  const remainingTime = (quizId: string | number) => {
+    const rec = completedMap[String(quizId)];
+    if (!rec) return 0;
+    const rem = COOLDOWN_MS - (Date.now() - rec.completedAt);
+    return Math.max(0, rem);
+  };
+
+  const formatRemaining = (ms: number) => {
+    const totalSec = Math.ceil(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
 
   const topics = [
     { id: "all", name: "All Topics" },
@@ -25,6 +82,7 @@ const LearnQuiz = () => {
     { id: "biodiversity", name: "Biodiversity" }
   ];
 
+  // Base quizzes (questionCount, meta)
   const quizzes = [
     {
       id: 1,
@@ -37,43 +95,7 @@ const LearnQuiz = () => {
       duration: "5 min",
       completed: false,
       image: "🌍",
-      questions: [
-        {
-          question: "What is the main greenhouse gas contributing to climate change?",
-          options: ["Carbon Dioxide (CO₂)", "Nitrogen", "Oxygen", "Hydrogen"],
-          correctAnswer: "Carbon Dioxide (CO₂)",
-          explanation: "Carbon dioxide (CO₂) is the primary greenhouse gas emitted through human activities, primarily from burning fossil fuels."
-        },
-        {
-          question: "Which of these is NOT a consequence of global warming?",
-          options: ["Rising sea levels", "Increasing polar ice", "More extreme weather events", "Ocean acidification"],
-          correctAnswer: "Increasing polar ice",
-          explanation: "Global warming is causing polar ice to melt, not increase. The other options are all consequences of climate change."
-        },
-        {
-          question: "What percentage of Earth's surface is covered by water?",
-          options: ["About 50%", "About 60%", "About 70%", "About 80%"],
-          correctAnswer: "About 70%",
-          explanation: "Approximately 71% of the Earth's surface is water-covered, with oceans holding about 96.5% of all Earth's water."
-        },
-        {
-          question: "Which activity contributes the most to global greenhouse gas emissions?",
-          options: ["Transportation", "Electricity production", "Agriculture", "Residential heating"],
-          correctAnswer: "Electricity production",
-          explanation: "Electricity production generates the largest share of greenhouse gas emissions globally, primarily from burning fossil fuels."
-        },
-        {
-          question: "What is the Paris Agreement?",
-          options: [
-            "A tourism pact between European countries",
-            "An international treaty on climate change mitigation",
-            "A trade agreement between Pacific nations",
-            "A space exploration partnership"
-          ],
-          correctAnswer: "An international treaty on climate change mitigation",
-          explanation: "The Paris Agreement is an international treaty adopted in 2015 aimed at reducing global greenhouse gas emissions and limiting global temperature increase."
-        }
-      ]
+      questions: []
     },
     {
       id: 2,
@@ -84,7 +106,7 @@ const LearnQuiz = () => {
       points: 75,
       questionCount: 5,
       duration: "8 min",
-      completed: true,
+      completed: false,
       score: 80,
       image: "⚡",
       questions: []
@@ -137,7 +159,7 @@ const LearnQuiz = () => {
       points: 60,
       questionCount: 5,
       duration: "6 min",
-      completed: true,
+      completed: false,
       score: 100,
       image: "👣",
       questions: []
@@ -171,12 +193,60 @@ const LearnQuiz = () => {
     }
   ];
 
-  const filteredQuizzes = activeTopic === "all" 
-    ? quizzes 
-    : quizzes.filter(quiz => quiz.topic === activeTopic);
+  // Thematic question banks
+  const banks: Record<string, Array<{question: string; options: string[]; correctAnswer: string; explanation: string;}>> = {
+    basics: [
+      { question: "Main greenhouse gas?", options: ["CO₂","N₂","O₂","H₂"], correctAnswer: "CO₂", explanation: "CO₂ is the primary greenhouse gas." },
+      { question: "Paris Agreement is?", options: ["Tourism pact","Climate treaty","Trade deal","Space partnership"], correctAnswer: "Climate treaty", explanation: "Treaty to mitigate climate change." },
+      { question: "Earth's water surface?", options: ["50%","60%","70%","80%"], correctAnswer: "70%", explanation: "About 71% of Earth's surface is water." },
+      { question: "Largest emission sector?", options: ["Transport","Electricity","Agriculture","Heating"], correctAnswer: "Electricity", explanation: "Electricity production is the largest share globally." },
+      { question: "Ocean issue from CO₂?", options: ["Alkalization","Acidification","Freezing","Evaporation"], correctAnswer: "Acidification", explanation: "CO₂ dissolves increasing acidity." },
+    ],
+    energy: [
+      { question: "Which is renewable?", options: ["Coal","Wind","Diesel","Gas"], correctAnswer: "Wind", explanation: "Wind is a renewable source." },
+      { question: "Solar panels generate?", options: ["Heat","Electricity","Water","Fuel"], correctAnswer: "Electricity", explanation: "PV converts light to electricity." },
+      { question: "Energy efficiency unit?", options: ["kWh","L/100km","dB","ppm"], correctAnswer: "kWh", explanation: "Household energy is in kWh." },
+      { question: "LED vs Incandescent savings?", options: ["20%","50%","80%","5%"], correctAnswer: "80%", explanation: "LEDs use up to 80% less energy." },
+      { question: "Net metering relates to?", options: ["Wind","Hydro","Solar","Coal"], correctAnswer: "Solar", explanation: "Excess solar fed to grid is net metering." },
+    ],
+    waste: [
+      { question: "Compostable?", options: ["Banana peel","Plastic bag","Glass","Metal"], correctAnswer: "Banana peel", explanation: "Organic waste composts." },
+      { question: "Recycle symbol number for PET?", options: ["1","2","4","7"], correctAnswer: "1", explanation: "PET is #1." },
+      { question: "E-waste example?", options: ["Bottle","Newspaper","Phone","Banana"], correctAnswer: "Phone", explanation: "Phones are e-waste." },
+      { question: "Best reduce strategy?", options: ["Buy more","Reuse","Landfill","Incinerate"], correctAnswer: "Reuse", explanation: "Reuse reduces waste." },
+      { question: "Compost needs?", options: ["Plastic","Oxygen","Mercury","Acid"], correctAnswer: "Oxygen", explanation: "Aerobic composting needs oxygen." },
+    ],
+    water: [
+      { question: "Largest freshwater use?", options: ["Industry","Agriculture","Domestic","Mining"], correctAnswer: "Agriculture", explanation: "Agriculture uses most freshwater." },
+      { question: "Efficient faucets use?", options: ["Aerators","Heaters","Filters","Softeners"], correctAnswer: "Aerators", explanation: "Aerators reduce flow." },
+      { question: "Rainwater harvesting stores?", options: ["Sewage","Stormwater","Potable only","None"], correctAnswer: "Stormwater", explanation: "Collects runoff for reuse." },
+      { question: "Greywater comes from?", options: ["Toilets","Showers","Industrial","Garden"], correctAnswer: "Showers", explanation: "Sinks/showers are greywater." },
+      { question: "Leaks waste?", options: ["No","Some","A lot","None"], correctAnswer: "A lot", explanation: "Fix leaks to save water." },
+    ],
+    biodiversity: [
+      { question: "Biodiversity means?", options: ["One species","All life variety","Only plants","Only animals"], correctAnswer: "All life variety", explanation: "Variety of life on Earth." },
+      { question: "Habitat loss causes?", options: ["Extinction","Growth","Migration only","No effect"], correctAnswer: "Extinction", explanation: "Leads to species extinction." },
+      { question: "Pollinators include?", options: ["Bees","Sharks","Worms","Lions"], correctAnswer: "Bees", explanation: "Bees pollinate plants." },
+      { question: "Invasive species are?", options: ["Native","Beneficial","Non-native harmful","Endangered"], correctAnswer: "Non-native harmful", explanation: "Harm local ecosystems." },
+      { question: "Conservation areas?", options: ["Protected","Urban","Industrial","Agricultural"], correctAnswer: "Protected", explanation: "Protected areas conserve biodiversity." },
+    ],
+  };
+
+  const pickQuestions = (topic: string, count: number) => {
+    const pool = banks[topic] || banks.basics;
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, shuffled.length));
+  };
+  const filteredQuizzes = activeTopic === "all"
+    ? quizzes
+    : quizzes.filter((quiz) => quiz.topic === activeTopic);
 
   const handleStartQuiz = (quiz: any) => {
-    setActiveQuiz(quiz);
+    // block if on cooldown
+    if (!canAttempt(quiz.id)) return;
+    // Generate question set per theme
+    const questions = pickQuestions(quiz.topic, quiz.questionCount);
+    setActiveQuiz({ ...quiz, questions });
     setCurrentQuestionIndex(0);
     setQuizScore(0);
     setSelectedAnswer(null);
@@ -206,13 +276,18 @@ const LearnQuiz = () => {
       setSelectedAnswer(null);
       setIsAnswerChecked(false);
     } else {
-      // Quiz completed
+      // Quiz completed (persist & start cooldown)
       const finalScore = Math.round((quizScore + (selectedAnswer === activeQuiz.questions[currentQuestionIndex].correctAnswer ? 1 : 0)) / activeQuiz.questions.length * 100);
-      setActiveQuiz({
-        ...activeQuiz,
-        completed: true,
-        score: finalScore
-      });
+      const next = { ...completedMap, [String(activeQuiz.id)]: { score: finalScore, completedAt: Date.now() } };
+      setCompletedMap(next);
+      saveCompleted(next);
+      // Award points proportionally to score
+      const base = Number(activeQuiz.points || 0);
+      const awarded = Math.max(0, Math.round(base * (finalScore / 100)));
+      if (awarded > 0) {
+        try { addPoints(awarded); } catch {}
+      }
+      setActiveQuiz({ ...activeQuiz, completed: true, score: finalScore, awardedPoints: awarded });
     }
   };
 
@@ -250,14 +325,18 @@ const LearnQuiz = () => {
         <div>
           <h2 className="text-xl font-semibold mb-4">Eco Quizzes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuizzes.map((quiz) => (
+            {filteredQuizzes.map((quiz) => {
+              const rec = completedMap[String(quiz.id)];
+              const locked = rec ? !canAttempt(quiz.id) : false;
+              const doneScore = rec?.score;
+              return (
               <Card key={quiz.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div className="text-4xl mb-2">{quiz.image}</div>
-                    {quiz.completed && (
+                    {rec && (
                       <Badge className="bg-green-100 text-green-800">
-                        {quiz.score}% Score
+                        {doneScore}% Score
                       </Badge>
                     )}
                   </div>
@@ -273,43 +352,43 @@ const LearnQuiz = () => {
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button 
-                        className="w-full bg-green-600 hover:bg-green-700"
-                        onClick={() => handleStartQuiz(quiz)}
+                        className={`w-full ${locked ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+                        onClick={() => !locked && handleStartQuiz(quiz)}
+                        disabled={locked}
                       >
-                        {quiz.completed ? "Retake Quiz" : "Start Quiz"}
+                        {locked ? `Available in ${formatRemaining(remainingTime(quiz.id))}` : (rec ? "Start Again" : "Start Quiz")}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-lg">
+                    <DialogContent className="sm:max-w-3xl w-full max-w-[900px] h-[88vh] overflow-hidden">
                       {activeQuiz && activeQuiz.id === quiz.id && !activeQuiz.completed && getCurrentQuestion() && (
-                        <>
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center space-x-2">
-                              <Earth className="h-5 w-5 text-green-600" />
-                              <span>{activeQuiz.title}</span>
-                            </DialogTitle>
-                            <DialogDescription>
-                              Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          <div className="py-4">
-                            <Progress 
-                              value={(currentQuestionIndex / activeQuiz.questions.length) * 100} 
-                              className="mb-6"
-                            />
-                            
+                        <div className="flex flex-col h-full min-h-0">
+                          {/* Header (non-scrolling) */}
+                          <div className="px-2 pt-3">
+                            <DialogHeader className="pb-2">
+                              <DialogTitle className="flex items-center space-x-2">
+                                <Earth className="h-5 w-5 text-green-600" />
+                                <span>{activeQuiz.title}</span>
+                              </DialogTitle>
+                              <DialogDescription>
+                                Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Progress value={(currentQuestionIndex / activeQuiz.questions.length) * 100} className="mb-2" />
+                          </div>
+
+                          {/* Scrollable Body */}
+                          <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
                             <div className="space-y-6">
-                              <h3 className="text-lg font-medium">
+                              <h3 className="text-xl font-semibold">
                                 {getCurrentQuestion().question}
                               </h3>
-                              
-                              <div className="space-y-3">
+                              <div className="space-y-4">
                                 {getCurrentQuestion().options.map((option: string) => (
                                   <Button
                                     key={option}
                                     variant="outline"
                                     onClick={() => handleAnswerSelect(option)}
-                                    className={`w-full justify-start text-left h-auto py-3 px-4 ${
+                                    className={`w-full justify-start text-left h-auto py-3 px-5 rounded-lg ${
                                       selectedAnswer === option 
                                         ? isAnswerChecked 
                                           ? option === getCurrentQuestion().correctAnswer
@@ -348,31 +427,33 @@ const LearnQuiz = () => {
                                   </div>
                                 </div>
                               )}
-                              
-                              {!isAnswerChecked ? (
-                                <Button 
-                                  onClick={checkAnswer} 
-                                  disabled={!selectedAnswer}
-                                  className="w-full bg-green-600 hover:bg-green-700"
-                                >
-                                  Check Answer
-                                </Button>
-                              ) : (
-                                <Button 
-                                  onClick={goToNextQuestion} 
-                                  className="w-full bg-blue-600 hover:bg-blue-700"
-                                >
-                                  {currentQuestionIndex < activeQuiz.questions.length - 1 ? 'Next Question' : 'See Results'}
-                                </Button>
-                              )}
                             </div>
                           </div>
-                        </>
+
+                          {/* Fixed Footer (always visible) */}
+                          <div className="px-2 pb-3 pt-2 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+                            {!isAnswerChecked ? (
+                              <Button 
+                                onClick={checkAnswer} 
+                                disabled={!selectedAnswer}
+                                className="w-full bg-green-600 hover:bg-green-700"
+                              >
+                                Submit Answer
+                              </Button>
+                            ) : (
+                              <Button 
+                                onClick={goToNextQuestion} 
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                              >
+                                {currentQuestionIndex < activeQuiz.questions.length - 1 ? 'Next Question' : 'See Results'}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       )}
                       
-                      {/* Quiz Results */}
                       {activeQuiz && activeQuiz.id === quiz.id && activeQuiz.completed && (
-                        <>
+                        <div className="h-full overflow-y-auto px-2 pb-3">
                           <DialogHeader>
                             <DialogTitle className="text-center">Quiz Completed!</DialogTitle>
                           </DialogHeader>
@@ -400,24 +481,19 @@ const LearnQuiz = () => {
                             <div className="flex items-center space-x-2 mb-6">
                               <Award className="h-5 w-5 text-yellow-500" />
                               <span className="font-medium">
-                                {activeQuiz.points} Eco-Points Earned
+                                {activeQuiz.awardedPoints ?? 0} Eco-Points Earned (based on {activeQuiz.score}% score)
                               </span>
                             </div>
                             
-                            <Button 
-                              onClick={() => handleStartQuiz(quiz)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              Retake Quiz
-                            </Button>
+                            <Button disabled className="bg-gray-300 cursor-not-allowed">Attempted</Button>
                           </div>
-                        </>
+                        </div>
                       )}
                     </DialogContent>
                   </Dialog>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         </div>
 
