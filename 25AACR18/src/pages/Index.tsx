@@ -204,49 +204,49 @@ const Index = () => {
         </div>
       </section>
 
-      {/* About EcoTrackr */}
-      <section id="about" className="py-20 bg-white">
+      {/* About EcoTrackr (glass theme) */}
+      <section id="about" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">About EcoTrackr</h2>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+            <h2 className="text-4xl font-bold text-emerald-50 mb-6">About EcoTrackr</h2>
+            <p className="text-xl text-emerald-100/80 max-w-4xl mx-auto leading-relaxed">
               Climate change is one of the greatest challenges of our time. Every action matters, and EcoTrackr 
               empowers individuals to make a measurable difference. Our mission is to make sustainable living 
               accessible, rewarding, and impactful for everyone.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="text-center hover:shadow-lg transition-shadow">
+            <Card className="text-center hover:shadow-xl transition-all bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10">
               <CardHeader>
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-green-100/70 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Leaf className="h-8 w-8 text-green-600" />
                 </div>
-                <CardTitle>Individual Impact</CardTitle>
+                <CardTitle className="text-emerald-50">Individual Impact</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Every small action contributes to a larger movement for environmental change.</p>
+                <p className="text-emerald-100/80">Every small action contributes to a larger movement for environmental change.</p>
               </CardContent>
             </Card>
-            <Card className="text-center hover:shadow-lg transition-shadow">
+            <Card className="text-center hover:shadow-xl transition-all bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10">
               <CardHeader>
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-blue-100/70 dark:bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-blue-600" />
                 </div>
-                <CardTitle>Community Power</CardTitle>
+                <CardTitle className="text-emerald-50">Community Power</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Together, we can create a sustainable future through collective action.</p>
+                <p className="text-emerald-100/80">Together, we can create a sustainable future through collective action.</p>
               </CardContent>
             </Card>
-            <Card className="text-center hover:shadow-lg transition-shadow">
+            <Card className="text-center hover:shadow-xl transition-all bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10">
               <CardHeader>
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-purple-100/70 dark:bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Award className="h-8 w-8 text-purple-600" />
                 </div>
-                <CardTitle>Rewarding Journey</CardTitle>
+                <CardTitle className="text-emerald-50">Rewarding Journey</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Making sustainable choices should be rewarding and enjoyable.</p>
+                <p className="text-emerald-100/80">Making sustainable choices should be rewarding and enjoyable.</p>
               </CardContent>
             </Card>
           </div>
@@ -285,39 +285,39 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 bg-white">
+      {/* Testimonials (glass theme) */}
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">What Our Users Say</h2>
-            <p className="text-xl text-gray-600">Join thousands of eco-conscious individuals making a difference.</p>
+            <h2 className="text-4xl font-bold text-emerald-50 mb-6">What Our Users Say</h2>
+            <p className="text-xl text-emerald-100/80">Join thousands of eco-conscious individuals making a difference.</p>
           </div>
           <div className="relative max-w-4xl mx-auto">
-            <Card className="p-8">
+            <Card className="p-8 bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10">
               <CardContent className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-green-100/70 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                   <span className="text-green-600 font-bold text-xl">
                     {testimonials[currentTestimonial].avatar}
                   </span>
                 </div>
-                <p className="text-lg text-gray-700 mb-6 italic">
+                <p className="text-lg text-emerald-50 mb-6 italic">
                   "{testimonials[currentTestimonial].content}"
                 </p>
                 <div>
-                  <p className="font-semibold text-gray-900">{testimonials[currentTestimonial].name}</p>
-                  <p className="text-green-600">{testimonials[currentTestimonial].role}</p>
+                  <p className="font-semibold text-emerald-50">{testimonials[currentTestimonial].name}</p>
+                  <p className="text-emerald-200">{testimonials[currentTestimonial].role}</p>
                 </div>
               </CardContent>
             </Card>
             <button 
               onClick={prevTestimonial}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50"
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white/70 dark:bg-white/10 border border-white/40 backdrop-blur-md rounded-full p-2 shadow-lg hover:bg-white/80"
             >
               <ChevronLeft className="h-6 w-6 text-gray-600" />
             </button>
             <button 
               onClick={nextTestimonial}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50"
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white/70 dark:bg-white/10 border border-white/40 backdrop-blur-md rounded-full p-2 shadow-lg hover:bg-white/80"
             >
               <ChevronRight className="h-6 w-6 text-gray-600" />
             </button>
@@ -328,7 +328,7 @@ const Index = () => {
                 key={index}
                 onClick={() => setCurrentTestimonial(index)}
                 className={`w-3 h-3 rounded-full transition-colors ${
-                  index === currentTestimonial ? 'bg-green-600' : 'bg-gray-300'
+                  index === currentTestimonial ? 'bg-green-400' : 'bg-white/50'
                 }`}
               />
             ))}
