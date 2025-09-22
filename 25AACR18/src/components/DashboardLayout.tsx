@@ -244,7 +244,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
         {/* Main Page Content */}
         <main className="flex-1 p-6 overflow-auto">
-          {children}
+          <div className="min-h-[calc(100vh-6rem)] bg-gradient-to-br from-emerald-50 via-green-50 to-green-100 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 p-2 sm:p-4 md:p-6 rounded-xl">
+            <div className="max-w-6xl mx-auto space-y-6">
+              {children}
+            </div>
+          </div>
         </main>
       </section>
     </div>
