@@ -68,7 +68,21 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen hero-neo">
+    <div className="min-h-screen hero-neo relative">
+      {/* Video Background */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <video
+          className="w-full h-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          src="https://cdn.coverr.co/videos/coverr-green-leaves-1577/1080p.mp4"
+        />
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-emerald-950/70" />
+      </div>
       {/* Navbar */}
       <nav className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,7 +169,7 @@ const Index = () => {
                 Join Now
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="border-green-300 text-green-200 hover:bg-green-950/20 text-lg px-8 py-4">
+            <Button variant="outline" size="lg" className="bg-white text-green-700 border-white hover:bg-white/90 hover:text-green-800 text-lg px-8 py-4 shadow">
               Explore Features
             </Button>
           </div>
