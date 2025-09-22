@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,10 +67,23 @@ const Index = () => {
     setCurrentTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+  // Parallax effect for background video
+  const videoWrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || window.pageYOffset;
+      if (videoWrapRef.current) {
+        videoWrapRef.current.style.transform = `translateY(${y * 0.2}px)`;
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen hero-neo relative">
-      {/* Video Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Video Background with parallax */}
+      <div ref={videoWrapRef} className="fixed inset-0 -z-10 overflow-hidden will-change-transform">
         <video
           className="w-full h-full object-cover"
           autoPlay
@@ -78,10 +91,25 @@ const Index = () => {
           loop
           playsInline
           preload="auto"
-          src="https://cdn.coverr.co/videos/coverr-green-leaves-1577/1080p.mp4"
-        />
+          poster="/videos/eco-bg-poster.jpg"
+        >
+          {/* Prefer local mobile source on small screens */}
+          <source src="/videos/eco-bg-mobile.mp4" type="video/mp4" media="(max-width: 640px)" />
+          {/* Local desktop fallback if provided */}
+          <source src="/videos/eco-bg.mp4" type="video/mp4" media="(min-width: 641px)" />
+          {/* Remote fallbacks */}
+          <source src="https://cdn.coverr.co/videos/coverr-green-leaves-1577/1080p.mp4" type="video/mp4" media="(min-width: 1024px)" />
+          <source src="https://cdn.coverr.co/videos/coverr-green-leaves-1577/720p.mp4" type="video/mp4" media="(max-width: 1023px)" />
+        </video>
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-emerald-950/70" />
+        {/* Vignette overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%)",
+          }}
+        />
       </div>
       {/* Navbar */}
       <nav className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50">
@@ -225,26 +253,29 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Core Features */}
-      <section id="features" className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
+      {/* Core Features (glass theme) */}
+      <section id="features" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">Core Features</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-4xl font-bold text-emerald-50 mb-6">Core Features</h2>
+            <p className="text-xl text-emerald-100/80 max-w-3xl mx-auto">
               Discover the tools that make sustainable living simple, engaging, and rewarding.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
+              <Card
+                key={index}
+                className="text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10"
+              >
                 <CardHeader>
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-green-100/70 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+                  <CardTitle className="text-lg text-emerald-50">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600">
+                  <CardDescription className="text-emerald-100/80">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
