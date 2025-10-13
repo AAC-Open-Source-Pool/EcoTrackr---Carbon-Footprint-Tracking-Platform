@@ -1,73 +1,91 @@
-# Welcome to your Lovable project
 
-## Project info
+# EcoTrack - Carbon Footprint Tracking Platform
+<div style="display: flex; align-items: center;">
+  <img src="https://via.placeholder.com/100x100.png?text=EcoTrack" alt="icon" style="height:100px;width:100px;">
+</div>
 
-**URL**: https://lovable.dev/projects/b4a6a6ba-7439-4257-9eec-b26cbbde65d6
+## Table of Contents
+- [Introduction](#introduction) <br>
+- [Requirements](#requirements) <br>
+- [How to use](#installation-and-usage) <br>
+- [Preview](#previews) <br>
+- [Team](#team-details) <br>
+- [Contribution](#contribution) <br>
+- [Improvements](#improvements)
 
-## How can I edit this code?
+## Abstract
+<p text-align="left">
+A comprehensive carbon footprint tracking and environmental platform that empowers users to monitor their environmental impact through transportation activity logging, participate in eco-friendly community activities, earn rewards for sustainable behavior, and connect with environmental organizations. Built with modern web technologies for an engaging user experience.
+</p>
 
-There are several ways of editing your application.
+## Requirements
+|||
+|--|--|
+| Node.js | >= 18.0.0 (for backend server) |
+| MongoDB | >= 4.4 (for database) |
+| Modern Browser | Chrome, Firefox, Edge — latest stable |
 
-**Use Lovable**
+## Installation and usage
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b4a6a6ba-7439-4257-9eec-b26cbbde65d6) and start prompting.
+Follow these steps to run the project locally:
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+# Clone the repository
+git clone https://github.com/AAC-Open-Source-Pool/25AACR18.git
+cd ecotrack
 
-**Use your preferred IDE**
+# Install dependencies
+npm install
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Start MongoDB (make sure it's running)
+mongod
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
+
+# Access the application
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:5000
 ```
 
-**Edit a file directly in GitHub**
+## Preview
+Screenshots of the project<br>
+<img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335092/Screenshot_2025-10-13_112613_qpi3wo.png">
+<img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335088/Screenshot_2025-10-13_112652_iwkydu.png">
+<img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335087/Screenshot_2025-10-13_112735_bdb4pe.png">
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Team details
 
-**Use GitHub Codespaces**
+<b>Team Number: </b><p>25AACR18</p>
+<b>Senior Mentor:</b><p>Alekhya</p>
+<b>Junior Mentor:</b><p>Premendhar</p>
+<b>Team Member 1:</b><p>Kamatala Akshithguptha</p>
+<b>Team Member 2:</b><p>Vimalanvitha</p>
+<b>Team Member 4:</b><p>Varshini</p>
+<b>Team Member 5:</b><p>Hasini</p>
+<b>Team Member 3:</b><p>Hemanth</p>
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
 
-This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Contribution
+1. Before choosing to propose changes to this project, it is advisable to go through the readme.md file of the project to get the philosophy and the motive that went behind this project. The pull request should align with the philosophy and the motive of the original poster of this project.
+2. To add your changes, make sure that the programming language in which you are proposing the changes should be the same as the programming language that has been used in the project. The versions of the programming language and the libraries(if any) used should also match with the original code.
+3. Write a documentation on the changes that you are proposing. The documentation should include the problems you have noticed in the code(if any), the changes you would like to propose, the reason for these changes, and sample test cases. Remember that the topics in the documentation are strictly not limited to the topics aforementioned, but are just an inclusion.
+4. Submit a pull request via [Git etiquettes](https://gist.github.com/mikepea/863f63d6e37281e329f8)
 
-## How can I deploy this project?
+## Improvements
 
-Simply open [Lovable](https://lovable.dev/projects/b4a6a6ba-7439-4257-9eec-b26cbbde65d6) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Planned improvements and ideas you can contribute to:
+- **Enhanced Analytics**: Add more detailed carbon footprint analytics with trends and comparisons
+- **Mobile App**: Develop native mobile applications for iOS and Android
+- **Multi-language Support**: Add support for multiple languages starting with English and regional languages
+- **IoT Integration**: Connect with smart devices for automatic activity tracking
+- **AI-Powered Insights**: Implement machine learning for personalized eco-friendly recommendations
+- **Blockchain Integration**: Add blockchain for transparent carbon credit tracking
+- **API Rate Limiting**: Implement proper rate limiting for API endpoints
+- **Comprehensive Testing**: Add unit tests, integration tests, and end-to-end testing
