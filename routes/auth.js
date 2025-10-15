@@ -62,27 +62,30 @@ router.post("/login", async (req, res) => {
     }
 
     // Check if NGO exists in NGO collection
-    let ngo = await NGO.findOne({ email });
-    if (ngo) {
-      const isMatch = await bcrypt.compare(password, ngo.password);
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+  // Check if NGO exists in NGO collection
+let ngo = await NGO.findOne({ email });
+if (ngo) {
+  const isMatch = await bcrypt.compare(password, ngo.password);
+  if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-      const payload = { user: { id: ngo._id } };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+  // ✅ FIXED PAYLOAD
+  const payload = { ngo: { id: ngo._id } };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-      return res.json({
-        token,
-        userId: ngo._id,
-        email: ngo.email,
-        role: 'ngo',
-        user: {
-          id: ngo._id,
-          organizationName: ngo.organizationName,
-          email: ngo.email,
-          role: 'ngo'
-        }
-      });
+  return res.json({
+    token,
+    userId: ngo._id,
+    email: ngo.email,
+    role: "ngo",
+    user: {
+      id: ngo._id,
+      organizationName: ngo.organizationName,
+      email: ngo.email,
+      role: "ngo"
     }
+  });
+}
+
 
     return res.status(400).json({ message: "Invalid credentials" });
   } catch (err) {
