@@ -47,7 +47,7 @@ router.get("/", auth, async (req, res) => {
     
     if (userId) {
       // Only return posts for the specified user
-      if (String(userId) !== String(req.userData._id)) {
+      if (!req.user || String(userId) !== String(req.user._id)) {
         return res.status(403).json({ error: "Unauthorized access to user posts" });
       }
       query.user = userId;
@@ -67,10 +67,11 @@ router.get("/", auth, async (req, res) => {
 // Add post
 router.post("/", auth, async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     const post = new Community({ 
       ...req.body, 
-      user: req.userData._id,
-      author: req.userData.username
+      user: req.user._id,
+      author: req.user.username || req.user.email || 'User'
     });
     await post.save();
     
@@ -101,7 +102,8 @@ router.delete("/:postId", auth, async (req, res) => {
     }
     
     // Check if the current user is the owner of the post
-    if (String(post.user) !== String(req.userData._id) && req.userData.role !== 'admin') {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (String(post.user) !== String(req.user._id) && req.user.role !== 'admin') {
       return res.status(403).json({ 
         error: "Unauthorized: You can only delete your own posts" 
       });

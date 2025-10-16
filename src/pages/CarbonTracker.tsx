@@ -120,34 +120,6 @@ const CarbonTracker = () => {
         if (entries && entries.length > 0) {
           setEmissionHistory(entries);
           setLastEmissionDate(entries[entries.length - 1].date);
-          // Update weekly data with only current week's entries
-          const weeklyData = getEmptyWeeklyData();
-          // Get start of current week (Monday)
-          const now = new Date();
-          const dayOfWeek = now.getDay();
-          const monday = new Date(now);
-          monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-          monday.setHours(0,0,0,0);
-          const sunday = new Date(monday);
-          sunday.setDate(monday.getDate() + 6);
-          sunday.setHours(23,59,59,999);
-          // Filter entries for current week
-          const weekEntries = entries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            return entryDate >= monday && entryDate <= sunday;
-          });
-          // Fill weeklyData with 0 for days with no entry, and entry.value for days with entry
-          // Map: { 'Mon': value, ... }
-          const dayValueMap = {};
-          weekEntries.forEach(entry => {
-            const entryDate = new Date(entry.date);
-            const dayName = getDayName(entryDate);
-            dayValueMap[dayName] = entry.value;
-          });
-          for (let i = 0; i < weeklyData.length; i++) {
-            weeklyData[i].value = dayValueMap[weeklyData[i].date] || 0;
-          }
-          setWeekly(weeklyData);
         }
       } catch (error) {
         console.error(error);
@@ -159,7 +131,37 @@ const CarbonTracker = () => {
   // Initialize weekly data
   useEffect(() => {
     const loadWeeklyData = async () => {
-      const weeklyData = await getWeeklyData();
+      let weeklyData = await getWeeklyData();
+      const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+      const hasBackendValues = Array.isArray(weeklyData) && weeklyData.some(d => typeof d.value === 'number' && d.value > 0);
+      if (!hasBackendValues) {
+        // fallback to local entries
+        try {
+          const entries = await getEntries();
+          if (entries && entries.length > 0) {
+            // build week Monday..Sunday
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+            monday.setHours(0,0,0,0);
+
+            const weekData: any[] = [];
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(monday);
+              d.setDate(monday.getDate() + i);
+              const dateStr = d.toISOString().slice(0,10);
+              const entry = entries.find(e => e.date === dateStr);
+              weekData.push({ label: labels[i], date: dateStr, value: entry ? entry.value : 0 });
+            }
+            weeklyData = weekData;
+          }
+        } catch (err) {
+          console.error('Error building weekly data from entries:', err);
+        }
+      }
+
       setWeekly(weeklyData);
     };
     loadWeeklyData();
@@ -194,7 +196,34 @@ const CarbonTracker = () => {
     }
     // Refresh UI state
     setCooldownMs(getCooldownRemainingMs(Date.now()));
-    const weeklyData = await getWeeklyData();
+    // Try backend weekly first, fallback to local entries if backend returns zeros
+    let weeklyData = await getWeeklyData();
+    const hasValues = Array.isArray(weeklyData) && weeklyData.some(d => typeof d.value === 'number' && d.value > 0);
+    if (!hasValues) {
+      // build from local entries
+      try {
+        const entries = await getEntries();
+        if (entries && entries.length > 0) {
+          const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+          const now = new Date();
+          const dayOfWeek = now.getDay();
+          const monday = new Date(now);
+          monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+          monday.setHours(0,0,0,0);
+          const weekData: any[] = [];
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            const dateStr = d.toISOString().slice(0,10);
+            const entry = entries.find(e => e.date === dateStr);
+            weekData.push({ label: labels[i], date: dateStr, value: entry ? entry.value : 0 });
+          }
+          weeklyData = weekData;
+        }
+      } catch (err) {
+        console.error('Error building weekly data from entries after save:', err);
+      }
+    }
     setWeekly(weeklyData);
     const newPoints = getPoints();
     setPoints(newPoints);

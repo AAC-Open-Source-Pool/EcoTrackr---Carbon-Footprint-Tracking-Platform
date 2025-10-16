@@ -216,12 +216,17 @@ const CommunityPage = () => {
         method: "POST",
         body: JSON.stringify({ content: newPost }),
       });
+
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
+        console.error('Post creation failed', errBody);
         throw new Error(errBody.error || "Failed to post");
       }
+
       const created = await res.json();
-      setPosts([created, ...posts]);
+      // Refresh posts list from server to ensure consistent ordering and TTL filtering
+      const refreshed = await fetchAndProcessPosts();
+      setPosts([created, ...refreshed.filter(p => p._id !== created._id)]);
       setNewPost("");
     } catch (err) {
       console.error("Error adding post:", err);

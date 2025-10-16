@@ -10,7 +10,18 @@ export type DailyEntry = {
 export const getCurrentUserId = (): string => {
   try {
     const v = localStorage.getItem("auth:userId");
-    return v && v.trim().length > 0 ? v : "anon";
+    if (v && v.trim().length > 0) return v;
+    // fallback to stored user object (set by auth helper)
+    const userRaw = localStorage.getItem('user') || localStorage.getItem('userData');
+    if (userRaw) {
+      try {
+        const u = JSON.parse(userRaw);
+        if (u && (u.id || u._id)) return String(u.id || u._id);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return "anon";
   } catch {
     return "anon";
   }
@@ -75,14 +86,31 @@ export async function getEntries(): Promise<DailyEntry[]> {
     // Fetch user-specific stats from backend
     const { success, data } = await getCarbonStats();
     if (success && data && Array.isArray(data.daily)) {
-      // Map backend daily entries to DailyEntry[]
-      const localEntries = data.daily.map(entry => ({
-        date: entry.date ? entry.date.slice(0, 10) : '',
-        value: typeof entry.co2 === 'number' ? entry.co2 : 0,
-        savedAt: entry.date ? new Date(entry.date).getTime() : Date.now()
-      }));
-      setEntries(localEntries);
-      return localEntries;
+      // Map backend daily entries to DailyEntry[], converting UTC dates to local date strings
+      const localEntries = data.daily.map(entry => {
+        const rawDate = entry.date ? String(entry.date) : '';
+        let localDateStr = '';
+        let savedAt = Date.now();
+        if (rawDate) {
+          const dt = new Date(rawDate);
+          // Convert UTC midnight to local date by adjusting for timezone offset
+          const localMs = dt.getTime() - dt.getTimezoneOffset() * 60000;
+          const localDt = new Date(localMs);
+          localDateStr = localDt.toISOString().slice(0, 10);
+          savedAt = dt.getTime();
+        }
+        return {
+          date: localDateStr,
+          value: typeof entry.co2 === 'number' ? entry.co2 : 0,
+          savedAt,
+        };
+      });
+      // Only overwrite local storage if backend actually returned entries
+      if (localEntries.length > 0) {
+        setEntries(localEntries);
+        return localEntries;
+      }
+      // else fall through to local storage fallback
     }
     // Fallback to local storage if backend fails
     const raw = localStorage.getItem(getEntriesKey());
@@ -179,13 +207,53 @@ export async function getWeeklyData(): Promise<WeeklyDatum[]> {
   // Fetch user-specific weekly stats from backend
   const { success, data } = await getCarbonStats();
   const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  if (success && data && Array.isArray(data.weekly)) {
-    return data.weekly.map((d, i) => ({
-      label: labels[i] || d.date,
-      date: d.date,
-      value: typeof d.co2 === 'number' ? d.co2 : 0
-    }));
+  if (success && data && Array.isArray(data.weekly) && data.weekly.length > 0) {
+    // Convert backend dates (UTC) to local dates so the weekday aligns with the client
+    return data.weekly.map((d, i) => {
+      const rawDate = d.date ? String(d.date) : '';
+      let dateStr = rawDate;
+      let label = labels[i] || rawDate;
+      if (rawDate) {
+        const dt = new Date(rawDate);
+        const localMs = dt.getTime() - dt.getTimezoneOffset() * 60000;
+        const localDt = new Date(localMs);
+        dateStr = localDt.toISOString().slice(0,10);
+        label = localDt.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      return {
+        label,
+        date: dateStr,
+        value: typeof d.co2 === 'number' ? d.co2 : 0,
+      };
+    });
   }
-  // fallback: empty week
-  return labels.map((label, i) => ({ label, date: '', value: 0 }));
+  // fallback: try to build week from local storage entries
+  try {
+    const raw = localStorage.getItem(getEntriesKey());
+    const entries: DailyEntry[] = raw ? JSON.parse(raw) : [];
+
+    // Determine current week's Monday and create array for 7 days
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+    monday.setHours(0,0,0,0);
+
+    const weekData: WeeklyDatum[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().slice(0,10);
+      const entry = entries.find(e => e.date === dateStr);
+      weekData.push({
+        label: labels[i],
+        date: dateStr,
+        value: entry ? entry.value : 0
+      });
+    }
+    return weekData;
+  } catch (error) {
+    console.error('Error building weekly data from local storage:', error);
+    return labels.map((label) => ({ label, date: '', value: 0 }));
+  }
 }
