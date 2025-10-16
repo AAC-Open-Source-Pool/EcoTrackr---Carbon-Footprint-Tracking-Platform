@@ -23,6 +23,11 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback
+} from "@/components/ui/avatar";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   LogOut,
   Check,
@@ -38,7 +44,8 @@ import {
   X,
   Pencil,
   Package,
-  Plus
+  Plus,
+  Leaf
 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 

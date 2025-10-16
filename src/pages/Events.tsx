@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar, MapPin, Clock, Users, Award, Star, Check, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { authFetch } from "@/lib/auth";
+import { authFetch, useAuth } from "@/lib/auth";
 
 const Events = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -15,12 +15,16 @@ const Events = () => {
   const [savedEvents, setSavedEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Load events from backend
+  // Load events and registered events from backend
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
+        // Load all events
         const res = await fetch("http://localhost:5000/api/events");
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -44,6 +48,23 @@ const Events = () => {
           setEvents(mapped);
         } else {
           setEvents([]);
+        }
+
+        // Load user's registered events
+        try {
+          const registeredRes = await authFetch("http://localhost:5000/api/events/my-registered");
+          if (registeredRes.ok) {
+            const registeredData = await registeredRes.json();
+            if (Array.isArray(registeredData)) {
+              const registeredIds = registeredData.map((e: any) => e._id);
+              setRegisteredEvents(registeredIds);
+            }
+          } else {
+            console.error("Failed to load registered events:", registeredRes.status);
+          }
+        } catch (regErr) {
+          console.error("Failed to load registered events", regErr);
+          // Don't set error state, just leave registeredEvents empty
         }
       } catch (err) {
         console.error("Failed to load events", err);
@@ -72,22 +93,82 @@ const Events = () => {
         toast({ title: "Registration failed", description: String(message), variant: "destructive" });
         return;
       }
-      // Update local list with returned event participants count
+      // Update local list with returned event participants count (or optimistically increment)
       setEvents(prev => prev.map(ev => ev.id === eventId ? {
         ...ev,
-        participants: Array.isArray(data.participants) ? data.participants.length : (data.participants || ev.participants),
+        participants: Array.isArray(data.participants) ? data.participants.length : (typeof data.participants === 'number' ? data.participants : (ev.participants + 1)),
         capacity: typeof data.capacity === 'number' ? data.capacity : ev.capacity,
       } : ev));
       if (!registeredEvents.includes(eventId)) {
         setRegisteredEvents([...registeredEvents, eventId]);
       }
+      const eventObj = events.find(e => e.id === eventId);
       toast({
-        title: "Successfully Registered!",
+        title: `Successfully registered for ${eventObj?.title || 'the event'}!`,
         description: "Check your email for event details.",
         className: "bg-green-50 border-green-200",
       });
     } catch (err) {
       toast({ title: "Network or auth error", description: "Please sign in and try again.", variant: "destructive" });
+    }
+  };
+
+
+  const handleDownloadPdf = async (event: any) => {
+    setPdfLoading(true);
+    try {
+      const res = await authFetch(`http://localhost:5000/api/events/${event.id}/download-pdf`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data && (data.message || data.error) ? (data.message || data.error) : `HTTP ${res.status}`;
+        toast({ title: 'Download failed', description: String(message), variant: 'destructive' });
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safe = (event.title || 'event').replace(/[^a-z0-9\-_. ]/gi, '_');
+      a.download = `${safe}_registration.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Download started', description: 'PDF is downloading.' });
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      toast({ title: 'Download error', description: 'Could not download PDF', variant: 'destructive' });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadCalendar = async (event: any) => {
+    setCalendarLoading(true);
+    try {
+      const res = await authFetch(`http://localhost:5000/api/events/${event.id}/download-calendar`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data && (data.message || data.error) ? (data.message || data.error) : `HTTP ${res.status}`;
+        toast({ title: 'Download failed', description: String(message), variant: 'destructive' });
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safe = (event.title || 'event').replace(/[^a-z0-9\-_. ]/gi, '_');
+      a.download = `${safe}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Calendar downloaded', description: 'Add this to your calendar.' });
+    } catch (err) {
+      console.error('Error downloading calendar:', err);
+      toast({ title: 'Download error', description: 'Could not download calendar', variant: 'destructive' });
+    } finally {
+      setCalendarLoading(false);
     }
   };
 
@@ -272,106 +353,15 @@ const Events = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between pt-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">View Details</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2">
-                        <span>{event.title}</span>
-                      </DialogTitle>
-                      <DialogDescription>
-                        {event.organizer ? `Organized by ${event.organizer}` : ""}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="flex items-center justify-center">
-                        <div className="text-6xl mb-4">{event.image}</div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-start space-x-3">
-                          <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Date & Time</p>
-                            <p className="text-sm text-gray-600">{event.date}{event.time ? `, ${event.time}` : ""}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Location</p>
-                            <p className="text-sm text-gray-600">{event.location}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <Award className="h-5 w-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Points</p>
-                            <p className="text-sm text-gray-600">{event.points} eco-points for participating</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <Users className="h-5 w-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Participants</p>
-                            <p className="text-sm text-gray-600">{event.participants}{event.capacity ? ` registered of ${event.capacity} capacity` : " registered"}</p>
-                            {Number(event.capacity) > 0 && (
-                              <div className="mt-1">
-                                <div className="h-2 w-full bg-gray-200 rounded">
-                                  <div
-                                    className={`h-2 rounded ${isEventFull(event) ? 'bg-red-500' : 'bg-green-500'}`}
-                                    style={{ width: `${Math.min(100, Math.round((Number(event.participants) / Number(event.capacity)) * 100))}%` }}
-                                  />
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                  <span>{event.participants} of {event.capacity} filled</span>
-                                  <span>•</span>
-                                  <span>{Math.max(0, Number(event.capacity) - Number(event.participants))} spots left</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <h4 className="font-medium mb-2">About This Event</h4>
-                        <p className="text-sm text-gray-600">{event.details}</p>
-                      </div>
-
-                      <div className="flex justify-end space-x-4 mt-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => handleSaveEvent(event.id)}
-                        >
-                          {isEventSaved(event.id) ? 'Unsave Event' : 'Save Event'}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            handleRegisterEvent(event.id);
-                            setSelectedEvent(event);
-                          }}
-                          disabled={isEventFull(event) || isEventRegistered(event.id)}
-                          className={
-                            isEventFull(event)
-                              ? "bg-gray-400"
-                              : isEventRegistered(event.id)
-                              ? "bg-gray-400"
-                              : "bg-green-600 hover:bg-green-700"
-                          }
-                        >
-                          {isEventFull(event)
-                            ? 'Closed'
-                            : isEventRegistered(event.id)
-                            ? 'Registered'
-                            : 'Register Now'}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadPdf(event)}
+                    disabled={!isEventRegistered(event.id) || pdfLoading}
+                  >
+                    {pdfLoading ? 'Generating...' : 'Download Details'}
+                  </Button>
+                </div>
 
                 <Button
                   onClick={() => {
@@ -439,11 +429,36 @@ const Events = () => {
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter className="flex justify-between pt-2">
-                        <Button variant="outline">
-                          Add to Calendar
-                        </Button>
-                        <Button variant="outline" className="text-red-600">
+                      <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-2 items-start sm:items-center">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleDownloadPdf(event)}
+                            disabled={pdfLoading}
+                          >
+                            {pdfLoading ? 'Generating...' : 'Download Details'}
+                          </Button>
+                          <Button variant="outline" onClick={() => handleDownloadCalendar(event)}>
+                            Add to Calendar
+                          </Button>
+                        </div>
+                        <Button variant="outline" className="text-red-600 w-full sm:w-auto" onClick={async () => {
+                          try {
+                            const res = await authFetch(`http://localhost:5000/api/events/${event.id}/leave`, { method: 'POST' });
+                            const data = await res.json().catch(()=>({}));
+                            if (!res.ok) {
+                              toast({ title: 'Cancel failed', description: data.message || `HTTP ${res.status}`, variant: 'destructive' });
+                              return;
+                            }
+                            // update UI: decrement participants and remove from registeredEvents
+                            setEvents(prev => prev.map(ev => ev.id === event.id ? ({ ...ev, participants: Math.max(0, ev.participants - 1) }) : ev));
+                            setRegisteredEvents(prev => prev.filter(id => id !== event.id));
+                            toast({ title: 'Registration cancelled', description: 'You have been removed from the event.' });
+                          } catch (err) {
+                            console.error('Error cancelling registration', err);
+                            toast({ title: 'Network error', description: 'Could not cancel registration', variant: 'destructive' });
+                          }
+                        }}>
                           Cancel Registration
                         </Button>
                       </CardFooter>
@@ -580,9 +595,18 @@ const Events = () => {
                 </p>
                 
                 <div className="flex justify-between">
-                  <Button variant="outline">
-                    Add to Calendar
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDownloadPdf(selectedEvent)}
+                      disabled={pdfLoading}
+                    >
+                      {pdfLoading ? 'Generating...' : 'Download Details'}
+                    </Button>
+                    <Button variant="outline" onClick={() => handleDownloadCalendar(selectedEvent)} disabled={calendarLoading}>
+                      {calendarLoading ? 'Adding...' : 'Add to Calendar'}
+                    </Button>
+                  </div>
                   <Button
                     onClick={() => setSelectedEvent(null)}
                     className="bg-green-600 hover:bg-green-700"
