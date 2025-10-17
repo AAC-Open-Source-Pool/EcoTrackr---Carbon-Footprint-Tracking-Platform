@@ -1,5 +1,5 @@
 
-# EcoTrack - Carbon Footprint Tracking Platform
+# EcoTrackr - Carbon Footprint Tracking Platform
 <div style="display: flex; align-items: center;">
   <img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335557/Screenshot_2025-10-13_113538_macowh.png" alt="icon" style="height:100px;width:100px;">
 </div>
