@@ -15,7 +15,9 @@
 
 ## Abstract
 <p text-align="left">
-EcoTrackr is a web-based carbon footprint tracker that helps individuals monitor, analyze, and reduce their daily carbon emissions. By logging daily activities such as transport, electricity use, and diet, users receive real-time CO₂ analysis and sustainability tips. The system compares consecutive days’ emissions—rewarding users with points for reduction and deducting points for increase. These points can be redeemed at nearby eco-friendly stores or through NGO collaborations. Additionally, event organizers can host eco-awareness programs, and NGOs can showcase sustainable products on the platform. With its interactive dashboard, carbon analytics, and reward system, EcoTrackr bridges the gap between awareness and actionable change, promoting greener habits and community engagement.
+EcoTrackr is a web-based carbon footprint tracking platform designed to empower individuals to monitor, analyze, and reduce their daily carbon emissions. By logging everyday activities such as transportation, electricity consumption, and dietary choices, users gain real-time insights into their CO₂ output along with personalized sustainability recommendations.
+The system dynamically compares emissions across consecutive days, rewarding users with points for reduced emissions and deducting points when emissions increase. These accumulated points can be redeemed at partnered eco-friendly stores or through collaborations with NGOs, promoting sustainable living through tangible incentives.
+Beyond individual tracking, EcoTrackr enables event organizers to host eco-awareness programs and provides NGOs with a platform to showcase sustainable products. Through its interactive dashboard, carbon analytics, and gamified reward system, EcoTrackr transforms environmental awareness into measurable, actionable change—fostering a culture of responsibility, community participation, and greener living.
 </p>
 
 ## Requirements
