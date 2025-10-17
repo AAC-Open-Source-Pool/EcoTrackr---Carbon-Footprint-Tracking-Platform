@@ -5,7 +5,7 @@
 </div>
 
 ## Table of Contents
-- [Introduction](#introduction) <br>
+- [Introduction](#Abstract) <br>
 - [Requirements](#requirements) <br>
 - [How to use](#installation-and-usage) <br>
 - [Preview](#previews) <br>
@@ -15,7 +15,7 @@
 
 ## Abstract
 <p text-align="left">
-A comprehensive carbon footprint tracking and environmental platform that empowers users to monitor their environmental impact through transportation activity logging, participate in eco-friendly community activities, earn rewards for sustainable behavior, and connect with environmental organizations. Built with modern web technologies for an engaging user experience.
+EcoTrackr is a web-based carbon footprint tracker that helps individuals monitor, analyze, and reduce their daily carbon emissions. By logging daily activities such as transport, electricity use, and diet, users receive real-time CO₂ analysis and sustainability tips. The system compares consecutive days’ emissions—rewarding users with points for reduction and deducting points for increase. These points can be redeemed at nearby eco-friendly stores or through NGO collaborations. Additionally, event organizers can host eco-awareness programs, and NGOs can showcase sustainable products on the platform. With its interactive dashboard, carbon analytics, and reward system, EcoTrackr bridges the gap between awareness and actionable change, promoting greener habits and community engagement.
 </p>
 
 ## Requirements
@@ -32,27 +32,40 @@ Follow these steps to run the project locally:
 ```bash
 # Clone the repository
 git clone https://github.com/AAC-Open-Source-Pool/25AACR18.git
+
+# Move into the project folder (the repo's working directory)
 cd ecotrack
 
-# Install dependencies
+# Install dependencies listed in package.json so the project can build and run
 npm install
 
-# Set up environment variables
+# Create a local environment file from the example (stores secrets and configuration)
 cp .env.example .env
+
 # Edit .env with your configuration
+# Open .env in a text editor and set values like DB connection string, PORT, API keys, and any other variables required by the app
+# Make sure you do NOT commit real secrets to git; use safe values for local development
+# Example: set MONGO_URI=mongodb://localhost:27017/ecotrack and PORT=5000 if those are expected
+# Save the file after updating the variables.
 
 # Start MongoDB (make sure it's running)
+# If you have MongoDB installed locally, run mongod in a separate terminal to start the database process.
+# Alternatively, if you use a cloud MongoDB (Atlas), ensure the MONGO_URI in .env points to it and that network access is allowed.
 mongod
 
 # Start the development server
+# This runs the backend and/or frontend dev script defined in package.json (e.g. starts Node/Express and Vite/React dev servers)
 npm run dev
 
 # Access the application
 # Frontend: http://localhost:5173
+# Open this URL in your browser to view the client-side UI (usually served by Vite or similar dev server).
 # Backend API: http://localhost:5000
+# The backend REST endpoints (Express) will typically be available here for API requests; use Postman or browser to test routes.
 ```
 
-## Preview
+
+## Previews
 Screenshots of the project<br>
 <img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335092/Screenshot_2025-10-13_112613_qpi3wo.png">
 <img src="https://res.cloudinary.com/dvdvowfr2/image/upload/v1760335088/Screenshot_2025-10-13_112652_iwkydu.png">
