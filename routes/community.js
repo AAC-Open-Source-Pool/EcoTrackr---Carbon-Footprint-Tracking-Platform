@@ -68,10 +68,14 @@ router.get("/", auth, async (req, res) => {
 router.post("/", auth, async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    const { content } = req.body;
+    if (!content || !String(content).trim()) return res.status(400).json({ error: 'Content required' });
+
     const post = new Community({ 
-      ...req.body, 
+      content: String(content).trim(),
       user: req.user._id,
-      author: req.user.username || req.user.email || 'User'
+      author: req.user.username || req.user.email || 'User',
+      authorAvatar: req.user.profilePicture || ''
     });
     await post.save();
     
@@ -81,6 +85,50 @@ router.post("/", auth, async (req, res) => {
   } catch (error) {
     console.error("Error creating post:", error);
     res.status(500).json({ error: "Failed to create post" });
+  }
+});
+
+// Like a post
+router.post('/:postId/like', auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(postId)) return res.status(400).json({ error: 'Invalid post id' });
+    const post = await Community.findById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const userId = req.user._id;
+    if (post.likedBy.some(id => String(id) === String(userId))) {
+      // toggle: remove like
+      post.likedBy = post.likedBy.filter(id => String(id) !== String(userId));
+    } else {
+      post.likedBy.push(userId);
+    }
+    post.likes = post.likedBy.length;
+    await post.save();
+    const populated = await Community.findById(post._id).populate('user', 'username profilePicture');
+    res.json(populated);
+  } catch (err) {
+    console.error('Like error', err);
+    res.status(500).json({ error: 'Failed to toggle like' });
+  }
+});
+
+// Add a comment
+router.post('/:postId/comment', auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { text } = req.body;
+    if (!text || !String(text).trim()) return res.status(400).json({ error: 'Comment required' });
+    if (!mongoose.Types.ObjectId.isValid(postId)) return res.status(400).json({ error: 'Invalid post id' });
+    const post = await Community.findById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const author = req.user.username || req.user.email || 'Anonymous';
+    post.comments.push({ text: String(text).trim(), author });
+    await post.save();
+    const populated = await Community.findById(post._id).populate('user', 'username profilePicture');
+    res.json(populated);
+  } catch (err) {
+    console.error('Comment error', err);
+    res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 
