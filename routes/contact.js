@@ -1,12 +1,13 @@
 import express from 'express';
 import ContactMessage from '../models/ContactMessage.js';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
 // Submit contact form
 router.post('/submit', async (req, res) => {
   try {
-    const { name, email, subject, message } = req.body;
+    const { name, email, subject, message, type } = req.body;
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
@@ -28,10 +29,54 @@ router.post('/submit', async (req, res) => {
       name,
       email,
       subject,
-      message
+      message,
+      type: type || 'general'
     });
 
     await contactMessage.save();
+
+    // Send email or SMS based on type
+    if (type === 'email') {
+      // Configure nodemailer transporter
+      const transporter = nodemailer.createTransporter({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+
+      const mailOptions = {
+        from: email,
+        to: 'vimalanvitha2006@gmail.com',
+        subject: `Contact Form: ${subject}`,
+        html: `
+          <h3>New Contact Message</h3>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Subject:</strong> ${subject}</p>
+          <p><strong>Message:</strong></p>
+          <p>${message.replace(/\n/g, '<br>')}</p>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log('Email sent successfully to vimalanvitha2006@gmail.com');
+    } else if (type === 'phone') {
+      // For SMS, we'll store the message and could integrate with SMS service
+      // For now, just save to database - you might want to integrate with Twilio or similar
+      console.log(`SMS to 9182075981: Name: ${name}, Email: ${email}, Subject: ${subject}, Message: ${message}`);
+
+      // You can integrate with SMS service here later
+      // Example with Twilio:
+      // const twilio = require('twilio');
+      // const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+      // await client.messages.create({
+      //   body: `New message from ${name} (${email}): ${message}`,
+      //   from: process.env.TWILIO_PHONE_NUMBER,
+      //   to: '+9182075981'
+      // });
+    }
 
     res.status(201).json({
       message: 'Thank you for your message! We will get back to you soon.',

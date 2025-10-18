@@ -77,11 +77,15 @@ router.post("/", auth, async (req, res) => {
       author: req.user.username || req.user.email || 'User',
       authorAvatar: req.user.profilePicture || ''
     });
-    await post.save();
-    
-    // Populate user data before sending response
-    const populatedPost = await Community.findById(post._id).populate("user", "username profilePicture");
-    res.status(201).json(populatedPost);
+    try {
+      const saved = await post.save();
+      console.log(`[community] Saved post ${saved._id} by user ${req.user._id}`);
+      const populatedPost = await Community.findById(saved._id).populate("user", "username profilePicture");
+      return res.status(201).json(populatedPost);
+    } catch (saveErr) {
+      console.error('[community] Error saving post:', saveErr);
+      return res.status(500).json({ error: 'Failed to save post', details: String(saveErr.message || saveErr) });
+    }
   } catch (error) {
     console.error("Error creating post:", error);
     res.status(500).json({ error: "Failed to create post" });

@@ -6,11 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Target, Lightbulb, Cog, Trophy, Mail, MessageSquare } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 const AboutUsPage = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const techStack = [
-    "React", "TypeScript", "Tailwind CSS", "Node.js", "Supabase", 
+    "React", "TypeScript", "Tailwind CSS", "Node.js", "Supabase",
     "Google Maps API", "Chart.js", "Progressive Web App"
   ];
 
@@ -215,15 +225,143 @@ const AboutUsPage = () => {
                   <h3 className="font-semibold text-emerald-900 dark:text-emerald-100 mb-4">Send us a Message</h3>
                   <form className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <Input placeholder="Your Name" />
-                      <Input placeholder="Your Email" type="email" />
+                      <Input
+                        placeholder="Your Name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
+                      <Input
+                        placeholder="Your Email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
                     </div>
-                    <Input placeholder="Subject" />
-                    <Textarea placeholder="Your message..." rows={4} />
-                    <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Send Message
-                    </Button>
+                    <Input
+                      placeholder="Subject"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                    />
+                    <Textarea
+                      placeholder="Your message..."
+                      rows={4}
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
+                    />
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={isSubmitting}
+                        onClick={async () => {
+                          if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+                            toast({
+                              title: "Error",
+                              description: "Please fill in all fields",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          setIsSubmitting(true);
+                          try {
+                            const response = await fetch('/api/contact/submit', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                ...formData,
+                                type: 'email'
+                              }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                              toast({
+                                title: "Success",
+                                description: "Message sent to email successfully!",
+                              });
+                              setFormData({ name: '', email: '', subject: '', message: '' });
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: data.message || "Failed to send message",
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to send message. Please try again.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsSubmitting(false);
+                          }
+                        }}
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send to Email
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={isSubmitting}
+                        onClick={async () => {
+                          if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+                            toast({
+                              title: "Error",
+                              description: "Please fill in all fields",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          setIsSubmitting(true);
+                          try {
+                            const response = await fetch('/api/contact/submit', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                ...formData,
+                                type: 'phone'
+                              }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                              toast({
+                                title: "Success",
+                                description: "Message sent to phone successfully!",
+                              });
+                              setFormData({ name: '', email: '', subject: '', message: '' });
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: data.message || "Failed to send message",
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to send message. Please try again.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsSubmitting(false);
+                          }
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Send to Phone
+                      </Button>
+                    </div>
                   </form>
                 </div>
               </div>
