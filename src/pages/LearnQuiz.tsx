@@ -324,13 +324,13 @@ const LearnQuiz = () => {
         {/* Quizzes */}
         <div>
           <h2 className="text-xl font-semibold mb-4">Eco Quizzes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {filteredQuizzes.map((quiz) => {
               const rec = completedMap[String(quiz.id)];
               const locked = rec ? !canAttempt(quiz.id) : false;
               const doneScore = rec?.score;
               return (
-              <Card key={quiz.id} className="hover:shadow-lg transition-shadow">
+              <Card key={quiz.id} className="hover:shadow-lg transition-shadow h-full flex flex-col">
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div className="text-4xl mb-2">{quiz.image}</div>
@@ -343,13 +343,14 @@ const LearnQuiz = () => {
                   <CardTitle>{quiz.title}</CardTitle>
                   <CardDescription>{quiz.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col">
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
                     <span>{quiz.questionCount} questions</span>
                     <span>{quiz.duration}</span>
                     <span className="capitalize">{quiz.difficulty}</span>
                   </div>
-                  <Dialog>
+                  <div className="mt-auto">
+                    <Dialog>
                     <DialogTrigger asChild>
                       <Button 
                         className={`w-full ${locked ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
@@ -490,7 +491,8 @@ const LearnQuiz = () => {
                         </div>
                       )}
                     </DialogContent>
-                  </Dialog>
+                    </Dialog>
+                  </div>
                 </CardContent>
               </Card>
             )})}

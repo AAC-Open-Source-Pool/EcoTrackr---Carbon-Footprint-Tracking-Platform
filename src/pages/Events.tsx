@@ -429,8 +429,8 @@ const Events = () => {
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-2 items-start sm:items-center">
-                        <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+                      <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-2 items-center">
+                        <div className="flex flex-wrap gap-2 flex-1 sm:flex-none items-center">
                           <Button
                             variant="outline"
                             onClick={() => handleDownloadPdf(event)}
