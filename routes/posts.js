@@ -37,10 +37,17 @@ router.post("/", auth, async (req, res) => {
     const user = req.user;
     const displayName = user.username || user.email || "User";
     const newPost = new Post({ userId: user._id, author: displayName, authorAvatar: user.profilePicture || "", content });
-    await newPost.save();
-    res.json(newPost);
+    try {
+      const saved = await newPost.save();
+      console.log(`[posts] Saved post ${saved._id} by user ${user._id}`);
+      return res.status(201).json(saved);
+    } catch (saveErr) {
+      console.error('[posts] Error saving post:', saveErr);
+      return res.status(500).json({ error: 'Failed to save post', details: String(saveErr.message || saveErr) });
+    }
   } catch (err) {
-    res.status(500).json({ error: "Failed to create post" });
+    console.error('[posts] Create post error:', err);
+    res.status(500).json({ error: "Failed to create post", details: String(err.message || err) });
   }
 });
 

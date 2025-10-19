@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { User, Award, BarChart3, Trophy, Medal, Crown, Flame, CalendarClock, Star, Leaf, CheckCircle, Lock } from "lucide-react";
 import { authFetch } from "@/lib/auth";
-import { getEntries, scopedKey } from "@/lib/carbon";
+import { getEntries, scopedKey, POINTS_EVENT, getPoints } from "@/lib/carbon";
 
 const Profile = () => {
   const [profileData, setProfileData] = useState({
@@ -26,6 +26,9 @@ const Profile = () => {
 
   const [ecoGoals, setEcoGoals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [carbonStreak, setCarbonStreak] = useState<number>(0);
+  const [carbonImproved, setCarbonImproved] = useState<boolean>(false);
+  const [livePoints, setLivePoints] = useState<number>(() => getPoints());
   const avatarChoices = [
     "https://api.dicebear.com/7.x/thumbs/svg?seed=Leaf",
     "https://api.dicebear.com/7.x/thumbs/svg?seed=River",
@@ -38,12 +41,15 @@ const Profile = () => {
   const [newGoal, setNewGoal] = useState<{ title: string; target?: string; progress?: number; deadline?: string }>({ title: "" });
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch profile from backend
+  // ✅ Fetch profile from backend (and re-fetch on points/quiz updates)
   useEffect(() => {
+    let mounted = true;
     const fetchProfile = async () => {
       try {
         const res = await authFetch("http://localhost:5000/api/profile");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (!mounted) return;
         setProfileData(data);
         setFormData(data);
         setEcoGoals(data.ecoGoals || []);
@@ -51,11 +57,61 @@ const Profile = () => {
       } catch (err) {
         console.error("Error fetching profile:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
+    // Initial fetch
     fetchProfile();
+
+    // Re-fetch handler for points/quiz/localStorage updates
+    const refetch = () => {
+      // Minor debounce to avoid rapid repeat refetches
+      setTimeout(() => { fetchProfile(); }, 150);
+    };
+
+  // Listen for local points update events
+  const onPointsEvent = () => { setLivePoints(getPoints()); refetch(); };
+  window.addEventListener(POINTS_EVENT, onPointsEvent as EventListener);
+    // Listen for storage changes (cross-tab) and re-fetch when quiz or user data change
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      if (e.key.startsWith('quiz:completed') || e.key.includes('carbon:points') || e.key === 'user' || e.key === 'userData') {
+        refetch();
+      }
+    };
+    window.addEventListener('storage', onStorage as EventListener);
+
+    return () => { mounted = false; window.removeEventListener(POINTS_EVENT, onPointsEvent as EventListener); window.removeEventListener('storage', onStorage as EventListener); };
+  }, []);
+
+  // Compute carbon improvement/streak asynchronously
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const entries = await getEntries();
+        if (!mounted) return;
+        if (Array.isArray(entries) && entries.length >= 2) {
+          const sorted = entries.slice().sort((a,b)=>a.date.localeCompare(b.date));
+          const last = sorted[sorted.length-1];
+          const prev = sorted[sorted.length-2];
+          setCarbonImproved(Boolean(last && prev && last.value < prev.value));
+          // compute streak
+          let streak = 1;
+          for (let i = sorted.length-1; i>0 && streak<4; i--) {
+            if (sorted[i].value < sorted[i-1].value) streak++; else break;
+          }
+          setCarbonStreak(streak);
+        } else {
+          setCarbonImproved(false);
+          setCarbonStreak(0);
+        }
+      } catch (err) {
+        console.error('Error computing carbon streak:', err);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // ✅ Save profile to backend
@@ -128,7 +184,7 @@ const Profile = () => {
           <User className="h-8 w-8 text-green-600" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Profile & Settings</h1>
-            <p className="text-gray-600">Manage your account and preferences</p>
+            <p className="text-muted-foreground">Manage your account and preferences</p>
           </div>
         </div>
 
@@ -160,7 +216,7 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-center">
-                    <p className="text-sm text-gray-600">{profileData.bio || ""}</p>
+                    <p className="text-sm text-muted-foreground">{profileData.bio || ""}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -176,38 +232,46 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {(() => {
-                    const stats = (profileData as any).stats || {};
-                    const totalPoints = stats.totalPoints || 0;
-                    const actionCount = stats.actionCount || 0;
-                    const eventsAttended = stats.eventsAttended || 0;
-                    const quizzesCompleted = stats.quizzesCompleted || 0;
-                    const treesSaved = (profileData as any).treesSaved || 0;
-                    const co2Reduced = (profileData as any).co2Reduced || 0;
+                      const stats = (profileData as any).stats || {};
+                      // Prefer live local points (keeps parity with Dashboard) but fallback to backend stats
+                      const totalPoints = typeof livePoints === 'number' && livePoints >= 0 ? livePoints : (stats.totalPoints || 0);
+                      // actionCount may be computed server-side; fall back to stats
+                      const actionCount = stats.actionCount || 0;
+                      const eventsAttended = stats.eventsAttended || 0;
+                      // Prefer local quiz completions from storage so UI updates immediately
+                      const rawQuiz = localStorage.getItem(scopedKey('quiz:completed')) || localStorage.getItem('quiz:completed') || "";
+                      let quizzesCompleted = stats.quizzesCompleted || 0;
+                      try {
+                        const map = rawQuiz ? JSON.parse(rawQuiz) : {};
+                        quizzesCompleted = Object.keys(map || {}).length || quizzesCompleted;
+                      } catch { /* ignore parse errors */ }
+                      const treesSaved = (profileData as any).treesSaved || 0;
+                      const co2Reduced = (profileData as any).co2Reduced || 0;
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="bg-green-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-green-700">{totalPoints}</div>
-                          <div className="text-sm text-green-800">Total Points</div>
+                        <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-green-800 dark:text-green-200">{totalPoints}</div>
+                          <div className="text-sm text-green-700 dark:text-green-100">Total Points</div>
                         </div>
-                        <div className="bg-blue-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-blue-700">{actionCount}</div>
-                          <div className="text-sm text-blue-800">Eco Actions</div>
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{actionCount}</div>
+                          <div className="text-sm text-blue-700 dark:text-blue-100">Eco Actions</div>
                         </div>
-                        <div className="bg-purple-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-purple-700">{eventsAttended}</div>
-                          <div className="text-sm text-purple-800">Events Attended</div>
+                        <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{eventsAttended}</div>
+                          <div className="text-sm text-purple-700 dark:text-purple-100">Events Attended</div>
                         </div>
-                        <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-yellow-700">{quizzesCompleted}</div>
-                          <div className="text-sm text-yellow-800">Quizzes Completed</div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">{quizzesCompleted}</div>
+                          <div className="text-sm text-yellow-700 dark:text-yellow-100">Quizzes Completed</div>
                         </div>
-                        <div className="bg-emerald-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-emerald-700">{treesSaved}</div>
-                          <div className="text-sm text-emerald-800">Trees Saved</div>
+                        <div className="bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{treesSaved}</div>
+                          <div className="text-sm text-emerald-700 dark:text-emerald-100">Trees Saved</div>
                         </div>
-                        <div className="bg-cyan-50 p-4 rounded-lg text-center">
-                          <div className="text-2xl font-bold text-cyan-700">{co2Reduced}kg</div>
-                          <div className="text-sm text-cyan-800">CO₂ Reduced</div>
+                        <div className="bg-cyan-50 dark:bg-cyan-900/30 p-4 rounded-lg text-center">
+                          <div className="text-2xl font-bold text-cyan-800 dark:text-cyan-200">{co2Reduced}kg</div>
+                          <div className="text-sm text-cyan-700 dark:text-cyan-100">CO₂ Reduced</div>
                         </div>
                       </div>
                     );
@@ -227,14 +291,14 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 {ecoGoals.length === 0 ? (
-                  <p className="text-sm text-gray-600">No goals yet. Add your first one below.</p>
+                  <p className="text-sm text-muted-foreground">No goals yet. Add your first one below.</p>
                 ) : (
                   ecoGoals.map((goal: any) => (
                     <div key={goal._id || goal.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="font-medium">{goal.title}</h4>
-                          {goal.target && <p className="text-sm text-gray-600">Target: {goal.target}</p>}
+                          {goal.target && <p className="text-sm text-muted-foreground">Target: {goal.target}</p>}
                         </div>
                         <span className="text-xs px-2 py-1 rounded border">{goal.deadline || "-"}</span>
                       </div>
@@ -364,7 +428,6 @@ const Profile = () => {
                   const days = (profileData as any).streakDays || 0;
 
                   const badges: Array<{ key: string; title: string; desc: string; icon: JSX.Element; color: string }>= [];
-                  let carbonStreak = 0;
                   // Helper to push tiered badges
                   const tier = (value: number, thresholds: number[]) => thresholds.reduce((lvl, t, i) => (value >= t ? i + 1 : lvl), 0);
                   const titleWithTier = (base: string, lvl: number) => lvl > 1 ? `${base} ${['I','II','III','IV'][lvl-1]}` : base;
@@ -399,32 +462,18 @@ const Profile = () => {
                     else if (best >= 80) badges.push({ key: 'grade-b', title: 'Grade B', desc: 'Scored 80%+ on a quiz', icon: <Star className="h-5 w-5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
                   } catch {}
 
-                  // Carbon reduction badges (using getEntries per-user)
-                  try {
-                    const entries = getEntries();
-                    if (entries.length >= 2) {
-                      // Today vs Yesterday improvement
-                      const sorted = entries.slice().sort((a,b)=>a.date.localeCompare(b.date));
-                      const last = sorted[sorted.length-1];
-                      const prev = sorted[sorted.length-2];
-                      if (last.value < prev.value) {
-                        badges.push({ key: 'carbon-cutter', title: 'Carbon Cutter', desc: 'Reduced emissions vs previous day', icon: <Leaf className="h-5 w-5" />, color: 'bg-teal-50 text-teal-700 border-teal-200' });
-                      }
-                      // 3-day improvement streak
-                      carbonStreak = 1;
-                      for (let i = sorted.length-1; i>0 && carbonStreak<4; i--) {
-                        if (sorted[i].value < sorted[i-1].value) carbonStreak++; else break;
-                      }
-                      if (carbonStreak >= 3) {
-                        badges.push({ key: 'streak-saver', title: 'Carbon Streak', desc: 'Reduced emissions 3 days in a row', icon: <Flame className="h-5 w-5" />, color: 'bg-rose-50 text-rose-700 border-rose-200' });
-                      }
-                    }
-                  } catch {}
+                  // Carbon reduction badges — use async-computed state
+                  if (carbonImproved) {
+                    badges.push({ key: 'carbon-cutter', title: 'Carbon Cutter', desc: 'Reduced emissions vs previous day', icon: <Leaf className="h-5 w-5" />, color: 'bg-teal-50 text-teal-700 border-teal-200' });
+                  }
+                  if (carbonStreak >= 3) {
+                    badges.push({ key: 'streak-saver', title: 'Carbon Streak', desc: 'Reduced emissions 3 days in a row', icon: <Flame className="h-5 w-5" />, color: 'bg-rose-50 text-rose-700 border-rose-200' });
+                  }
 
                   return (
                     <div className="space-y-6">
                       {badges.length === 0 ? (
-                        <p className="text-sm text-gray-600">No badges yet. Keep learning and tracking to unlock achievements!</p>
+                        <p className="text-sm text-muted-foreground">No badges yet. Keep learning and tracking to unlock achievements!</p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {badges.map(b => (
@@ -453,7 +502,7 @@ const Profile = () => {
                             const title = actions < 10 ? 'Action Starter I' : actions < 20 ? 'Action Starter II' : 'Action Starter III';
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                   <span>Eco Actions</span>
                                   <span>{actions}/{next} until {title}</span>
                                 </div>
@@ -462,9 +511,9 @@ const Profile = () => {
                                   {Array.from({ length: 3 }).map((_,i) => {
                                     const earned = actions >= (i===0?10:i===1?20:50);
                                     return earned ? (
-                                      <Award key={i} className="h-4 w-4 text-blue-600 transition-transform duration-300" title={`Unlocked: ${i===0?'10':i===1?'20':'50'} actions`} />
+                                      <Award key={i} className="h-4 w-4 text-blue-600 transition-transform duration-300" aria-label={`Unlocked: ${i===0?'10':i===1?'20':'50'} actions`} />
                                     ) : (
-                                      <Award key={i} className="h-4 w-4 text-blue-400 opacity-30" title={`Locked: reach ${i===0?'10':i===1?'20':'50'} actions`} />
+                                      <Award key={i} className="h-4 w-4 text-blue-400 opacity-30" aria-hidden />
                                     );
                                   })}
                                 </div>
@@ -478,7 +527,7 @@ const Profile = () => {
                             const lvlName = pts < 100 ? 'Eco Earner I' : pts < 250 ? 'Eco Earner II' : pts < 500 ? 'Eco Earner III' : 'Eco Earner IV';
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                   <span>Points</span>
                                   <span>{pts}/{next} until {lvlName}</span>
                                 </div>
@@ -489,9 +538,9 @@ const Profile = () => {
                                     const earned = pts >= thr;
                                     const Icon = i>=2 ? Crown : Medal;
                                     return earned ? (
-                                      <Icon key={i} className="h-4 w-4 text-emerald-600 transition-transform duration-300" title={`Unlocked: ${thr}+ points`} />
+                                      <Icon key={i} className="h-4 w-4 text-emerald-600 transition-transform duration-300" aria-label={`Unlocked: ${thr}+ points`} />
                                     ) : (
-                                      <Icon key={i} className="h-4 w-4 text-emerald-400 opacity-30" title={`Locked: reach ${thr} points`} />
+                                      <Icon key={i} className="h-4 w-4 text-emerald-400 opacity-30" aria-hidden />
                                     );
                                   })}
                                 </div>
@@ -505,7 +554,7 @@ const Profile = () => {
                             const lvlName = quizzes < 1 ? 'Quiz Whiz I' : quizzes < 5 ? 'Quiz Whiz II' : 'Quiz Whiz III';
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                   <span>Quizzes</span>
                                   <span>{quizzes}/{next} until {lvlName}</span>
                                 </div>
@@ -515,9 +564,9 @@ const Profile = () => {
                                     const thr = i===0?1:i===1?5:10;
                                     const earned = quizzes >= thr;
                                     return earned ? (
-                                      <Trophy key={i} className="h-4 w-4 text-yellow-600 transition-transform duration-300" title={`Unlocked: ${thr} quizzes`} />
+                                      <Trophy key={i} className="h-4 w-4 text-yellow-600 transition-transform duration-300" aria-label={`Unlocked: ${thr} quizzes`} />
                                     ) : (
-                                      <Trophy key={i} className="h-4 w-4 text-yellow-400 opacity-30" title={`Locked: complete ${thr} quizzes`} />
+                                      <Trophy key={i} className="h-4 w-4 text-yellow-400 opacity-30" aria-hidden />
                                     );
                                   })}
                                 </div>
@@ -526,22 +575,22 @@ const Profile = () => {
                           })()}
                           {/* Streak toward 7-Day Streak */}
                           <div>
-                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
                               <span>Activity Streak</span>
                               <span>{days}/7 until 7-Day Streak</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Progress className="flex-1" value={Math.min(100, (days/7)*100)} />
                               {days >= 7 ? (
-                                <Flame className="h-4 w-4 text-orange-600 transition-transform duration-300" title="Unlocked: 7-day streak" />
+                                <Flame className="h-4 w-4 text-orange-600 transition-transform duration-300" aria-label="Unlocked: 7-day streak" />
                               ) : (
-                                <Flame className="h-4 w-4 text-orange-400 opacity-30" title="Locked: reach 7-day streak" />
+                                <Flame className="h-4 w-4 text-orange-400 opacity-30" aria-hidden />
                               )}
                             </div>
                           </div>
                           {/* Carbon reduction streak toward 3 */}
                           <div>
-                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
                               <span>Carbon Reduction Streak</span>
                               <span>{Math.min(carbonStreak,3)}/3 until Carbon Streak</span>
                             </div>
@@ -549,9 +598,9 @@ const Profile = () => {
                               <Progress className="flex-1" value={Math.min(100, (Math.min(carbonStreak,3)/3)*100)} />
                               {Array.from({ length: 3 }).map((_,i) => (
                                 i < carbonStreak ? (
-                                  <Flame key={i} className="h-4 w-4 text-rose-600 transition-transform duration-300" title={`Unlocked: day ${i+1} reduced`} />
+                                  <Flame key={i} className="h-4 w-4 text-rose-600 transition-transform duration-300" aria-label={`Unlocked: day ${i+1} reduced`} />
                                 ) : (
-                                  <Flame key={i} className="h-4 w-4 text-rose-400 opacity-30" title={`Locked: day ${i+1} reduction`} />
+                                  <Flame key={i} className="h-4 w-4 text-rose-400 opacity-30" aria-hidden />
                                 )
                               ))}
                             </div>
@@ -582,7 +631,7 @@ const Profile = () => {
                       <div key={a._id || idx} className="flex items-center justify-between border rounded-lg p-3">
                         <div>
                           <div className="font-medium capitalize">{a.type || 'activity'}</div>
-                          <div className="text-sm text-gray-600">{a.description || a.title || '-'}</div>
+                          <div className="text-sm text-muted-foreground">{a.description || a.title || '-'}</div>
                         </div>
                         <div className="text-right">
                           {typeof a.points === 'number' && (
@@ -596,7 +645,7 @@ const Profile = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600">No activities yet. Your quiz completions and carbon saves will appear here.</p>
+                  <p className="text-sm text-muted-foreground">No activities yet. Your quiz completions and carbon saves will appear here.</p>
                 )}
               </CardContent>
             </Card>

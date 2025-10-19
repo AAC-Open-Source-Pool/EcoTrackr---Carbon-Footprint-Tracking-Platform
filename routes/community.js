@@ -47,7 +47,7 @@ router.get("/", auth, async (req, res) => {
     
     if (userId) {
       // Only return posts for the specified user
-      if (String(userId) !== String(req.userData._id)) {
+      if (!req.user || String(userId) !== String(req.user._id)) {
         return res.status(403).json({ error: "Unauthorized access to user posts" });
       }
       query.user = userId;
@@ -67,19 +67,72 @@ router.get("/", auth, async (req, res) => {
 // Add post
 router.post("/", auth, async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    const { content } = req.body;
+    if (!content || !String(content).trim()) return res.status(400).json({ error: 'Content required' });
+
     const post = new Community({ 
-      ...req.body, 
-      user: req.userData._id,
-      author: req.userData.username
+      content: String(content).trim(),
+      user: req.user._id,
+      author: req.user.username || req.user.email || 'User',
+      authorAvatar: req.user.profilePicture || ''
     });
-    await post.save();
-    
-    // Populate user data before sending response
-    const populatedPost = await Community.findById(post._id).populate("user", "username profilePicture");
-    res.status(201).json(populatedPost);
+    try {
+      const saved = await post.save();
+      console.log(`[community] Saved post ${saved._id} by user ${req.user._id}`);
+      const populatedPost = await Community.findById(saved._id).populate("user", "username profilePicture");
+      return res.status(201).json(populatedPost);
+    } catch (saveErr) {
+      console.error('[community] Error saving post:', saveErr);
+      return res.status(500).json({ error: 'Failed to save post', details: String(saveErr.message || saveErr) });
+    }
   } catch (error) {
     console.error("Error creating post:", error);
     res.status(500).json({ error: "Failed to create post" });
+  }
+});
+
+// Like a post
+router.post('/:postId/like', auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(postId)) return res.status(400).json({ error: 'Invalid post id' });
+    const post = await Community.findById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const userId = req.user._id;
+    if (post.likedBy.some(id => String(id) === String(userId))) {
+      // toggle: remove like
+      post.likedBy = post.likedBy.filter(id => String(id) !== String(userId));
+    } else {
+      post.likedBy.push(userId);
+    }
+    post.likes = post.likedBy.length;
+    await post.save();
+    const populated = await Community.findById(post._id).populate('user', 'username profilePicture');
+    res.json(populated);
+  } catch (err) {
+    console.error('Like error', err);
+    res.status(500).json({ error: 'Failed to toggle like' });
+  }
+});
+
+// Add a comment
+router.post('/:postId/comment', auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { text } = req.body;
+    if (!text || !String(text).trim()) return res.status(400).json({ error: 'Comment required' });
+    if (!mongoose.Types.ObjectId.isValid(postId)) return res.status(400).json({ error: 'Invalid post id' });
+    const post = await Community.findById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const author = req.user.username || req.user.email || 'Anonymous';
+    post.comments.push({ text: String(text).trim(), author });
+    await post.save();
+    const populated = await Community.findById(post._id).populate('user', 'username profilePicture');
+    res.json(populated);
+  } catch (err) {
+    console.error('Comment error', err);
+    res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 
@@ -101,7 +154,8 @@ router.delete("/:postId", auth, async (req, res) => {
     }
     
     // Check if the current user is the owner of the post
-    if (String(post.user) !== String(req.userData._id) && req.userData.role !== 'admin') {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (String(post.user) !== String(req.user._id) && req.user.role !== 'admin') {
       return res.status(403).json({ 
         error: "Unauthorized: You can only delete your own posts" 
       });

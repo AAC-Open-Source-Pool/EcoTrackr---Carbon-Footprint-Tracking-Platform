@@ -253,6 +253,8 @@ const Login = () => {
           redirectPath = '/dashboard';
       }
 
+      console.log("Login success:", { token: data.token, role: data.role, redirectPath });
+
       navigate(redirectPath);
 
     } catch (error) {

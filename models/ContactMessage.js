@@ -21,6 +21,11 @@ const contactMessageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  type: {
+    type: String,
+    enum: ['general', 'email', 'phone'],
+    default: 'general'
+  },
   status: {
     type: String,
     enum: ['unread', 'read', 'responded'],

@@ -11,4 +11,5 @@ export interface Event {
   updatedAt: string;
   imageUrl?: string;
   category?: string;
+  photos?: string[];
 }

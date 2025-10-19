@@ -207,34 +207,42 @@ const CommunityPage = () => {
     };
   }, [fetchAndProcessPosts, isLoadingPosts]);
 
-  // 🔹 Add new post
+  // 🔹 Add new post (uses /api/community)
   const handleAddPost = async () => {
     if (!newPost.trim()) return;
     try {
       setIsPosting(true);
-      const res = await authFetch("http://localhost:5000/api/posts", {
+      const res = await authFetch("http://localhost:5000/api/community", {
         method: "POST",
         body: JSON.stringify({ content: newPost }),
       });
+
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
+        console.error('Community post creation failed', errBody);
         throw new Error(errBody.error || "Failed to post");
       }
+
       const created = await res.json();
-      setPosts([created, ...posts]);
+      // Refresh posts list from server to ensure consistent ordering and TTL filtering
+      const refreshed = await fetchAndProcessPosts();
+      setPosts([created, ...refreshed.filter(p => p._id !== created._id)]);
       setNewPost("");
     } catch (err) {
-      console.error("Error adding post:", err);
+      console.error("Error adding community post:", err);
       toast({ title: "Could not post", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     } finally {
       setIsPosting(false);
     }
   };
 
-  // 🔹 Like a post
+  // 🔹 Like a post (toggle)
   const handleLike = async (postId: string) => {
     try {
-      const res = await authFetch(`http://localhost:5000/api/posts/${postId}/like`, { method: "POST" });
+      const res = await authFetch(`http://localhost:5000/api/community/${postId}/like`, { method: "POST" });
+      if (!res.ok) {
+        console.error('Like failed', await res.text().catch(() => '')); return;
+      }
       const updated = await res.json();
       setPosts(posts.map((p) => (p._id === postId ? updated : p)));
     } catch (err) {
@@ -247,15 +255,19 @@ const CommunityPage = () => {
     return Array.isArray(post.likedBy) && post.likedBy.some((id: any) => String(id) === String(myUserId));
   };
 
-  // 🔹 Add a comment
+  // 🔹 Add a comment to community post
   const handleComment = async (postId: string, text: string) => {
     if (!text.trim()) return;
     try {
-      const res = await axios.post(`http://localhost:5000/api/posts/${postId}/comment`, {
-        text,
-        author: displayName || undefined,
+      const res = await authFetch(`http://localhost:5000/api/community/${postId}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
       });
-      setPosts(posts.map((p) => (p._id === postId ? res.data : p)));
+      if (!res.ok) {
+        console.error('Comment failed', await res.text().catch(() => '')); return;
+      }
+      const updated = await res.json();
+      setPosts(posts.map((p) => (p._id === postId ? updated : p)));
     } catch (err) {
       console.error(err);
     }

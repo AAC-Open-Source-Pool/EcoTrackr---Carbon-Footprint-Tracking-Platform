@@ -18,6 +18,7 @@ import rewardsNgoRoutes from "./routes/rewards-ngo.js";
 import contactRoutes from "./routes/contact.js";
 import registrationsRoutes from "./routes/registrations.js";
 import quizzesRoutes from "./routes/quizzes.js";
+import communityRoutes from "./routes/community.js";
 import path from "path";
 
 dotenv.config();
@@ -73,6 +74,7 @@ app.use("/api/rewards/ngo", rewardsNgoRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/registrations", registrationsRoutes);
 app.use("/api/quizzes", quizzesRoutes);
+app.use("/api/community", communityRoutes);
 
 // ✅ Start server
 app.listen(PORT, () =>

@@ -220,6 +220,18 @@ export const clearToken = (): void => {
 
 export const setUserData = (data: any): void => {
   safeLocalStorage.setItem('userData', JSON.stringify(data));
+  // Also ensure a minimal `user` entry exists for role-based routing and guards.
+  try {
+    const minimalUser = {
+      id: data?.id || data?._id || `user-${Math.random().toString(36).substr(2, 9)}`,
+      email: data?.email || '',
+      role: data?.role || 'user',
+      name: data?.name || undefined,
+    };
+    safeLocalStorage.setItem('user', JSON.stringify(minimalUser));
+  } catch (e) {
+    console.error('Failed to write minimal user data:', e);
+  }
 };
 
 export const getUserData = (): any => {
@@ -237,6 +249,10 @@ export const setUserRole = (role: UserRole): void => {
     const user = JSON.parse(userData);
     user.role = role;
     safeLocalStorage.setItem('user', JSON.stringify(user));
+  } else {
+    // If no user exists in storage, create a minimal one so role checks work
+    const minimalUser = { id: `user-${Math.random().toString(36).substr(2, 9)}`, email: '', role };
+    safeLocalStorage.setItem('user', JSON.stringify(minimalUser));
   }
 };
 
