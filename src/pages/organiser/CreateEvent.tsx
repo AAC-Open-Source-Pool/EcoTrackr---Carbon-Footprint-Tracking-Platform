@@ -22,6 +22,30 @@ export default function CreateEvent() {
     location: '',
     maxParticipants: ''
   });
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(file);
+  });
+
+  const uploadImage = async (file: File) => {
+    try {
+      setUploading(true);
+      const dataUrl = await readFileAsDataUrl(file);
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/uploads', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ data: dataUrl, filename: file.name }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.url) throw new Error(data?.message || 'Upload failed');
+      setPhotos(prev => [...prev, data.url]);
+    } catch (err) {
+      console.error('Upload failed', err);
+      alert('Image upload failed');
+    } finally { setUploading(false); }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,13 +62,18 @@ export default function CreateEvent() {
     try {
       // Replace with your actual API call
       const token = localStorage.getItem('token');
+      const payload: Record<string, unknown> = { ...formData, maxParticipants: Number(formData.maxParticipants) || 0 };
+      if (photos.length > 0) {
+        payload.photos = photos;
+        payload.image = photos[0];
+      }
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -70,7 +99,7 @@ export default function CreateEvent() {
         
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Event Title"
@@ -94,7 +123,7 @@ export default function CreateEvent() {
                 variant="outlined"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Date & Time"
@@ -131,8 +160,15 @@ export default function CreateEvent() {
                 variant="outlined"
                 inputProps={{ min: 1 }}
               />
+              <div style={{ marginTop: 12 }}>
+                <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
+                {uploading ? <span style={{ marginLeft: 8 }}>Uploading...</span> : null}
+                <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                  {photos.map((p, i) => (<img key={p+i} src={p} alt={`preview-${i}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />))}
+                </div>
+              </div>
             </Grid>
-            <Grid item xs={12} sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Grid size={{ xs: 12 }} sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
               <Button 
                 variant="outlined" 
                 onClick={() => navigate(-1)}

@@ -41,3 +41,12 @@ export const isUserRegistered = (eventId: string, userId: string): boolean => {
   const userRegistrations = JSON.parse(localStorage.getItem('userRegistrations') || '{}');
   return !!userRegistrations[`${eventId}-${userId}`];
 };
+
+export const cancelRegistration = async (eventId: string, userId: string): Promise<void> => {
+  const userRegistrations = JSON.parse(localStorage.getItem('userRegistrations') || '{}');
+  const key = `${eventId}-${userId}`;
+  if (userRegistrations[key]) {
+    userRegistrations[key].status = 'cancelled';
+    localStorage.setItem('userRegistrations', JSON.stringify(userRegistrations));
+  }
+};

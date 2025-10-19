@@ -66,6 +66,7 @@ router.post("/", auth, async (req, res) => {
       capacity,
       points,
       image,
+      photos,
     } = req.body;
 
     const event = new Event({
@@ -81,6 +82,7 @@ router.post("/", auth, async (req, res) => {
       organizerId: req.user.id,
       organizerName: req.user.name || req.user.organizationName || 'Unknown Organizer',
       image,
+      photos: Array.isArray(photos) ? photos : (photos ? [photos] : []),
     });
     await event.save();
     res.status(201).json(event);
@@ -217,6 +219,18 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     console.error('Error fetching event:', err);
     res.status(500).json({ message: 'Error fetching event' });
+  }
+});
+
+// Get event photos
+router.get("/:id/photos", async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id).select('photos');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    res.json(Array.isArray(event.photos) ? event.photos : []);
+  } catch (err) {
+    console.error('Error fetching event photos:', err);
+    res.status(500).json({ message: 'Error fetching photos' });
   }
 });
 

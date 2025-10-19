@@ -8,6 +8,48 @@ import { Calendar, MapPin, Clock, Users, Award, Star, Check, Calendar as Calenda
 import { toast } from "@/hooks/use-toast";
 import { authFetch, useAuth } from "@/lib/auth";
 
+// Helper component to render event image (supports uploaded path like '/uploads/3.png')
+const EventImage = ({ src, alt, onClick }: { src: string; alt?: string; onClick?: () => void }) => {
+  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+  if (!src) return <div className="text-4xl">📅</div>;
+
+  const s = String(src).trim();
+  // detect common image indicators: file extensions, uploads path, data URL or http
+  const looksLikeImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(s) || s.startsWith('http') || s.startsWith('data:') || s.includes('/uploads') || s.startsWith('uploads') || s.includes('uploads/') || s.startsWith('/uploads/');
+
+  // Build absolute src for server-hosted uploads
+  let imgSrc = s;
+  if (!s.startsWith('http') && !s.startsWith('data:')) {
+    // Ensure leading slash and handle uploads path
+    const clean = s.startsWith('/') ? s : `/${s}`;
+    imgSrc = `${API_BASE}${clean}`;
+  }
+
+  // Force render as image if it looks like an upload path
+  const isUploadPath = s.includes('/uploads/') || s.startsWith('uploads/');
+  if (isUploadPath && !looksLikeImage) {
+    // Override the looksLikeImage check for upload paths
+  }
+
+  if (!looksLikeImage && !isUploadPath) {
+    // if it's short, treat as emoji/text icon
+    if (s.length <= 2) return <div className="text-4xl">{s}</div>;
+    // otherwise show the text as fallback
+    return <div className="text-sm text-gray-600 break-words max-w-xs">{s}</div>;
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt || 'event image'}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      className={`w-28 h-28 md:w-32 md:h-32 object-cover rounded-md ${onClick ? 'cursor-pointer' : ''}`}
+      onError={(e) => { try { (e.target as HTMLImageElement).src = '/uploads/placeholder.png'; } catch {} }}
+    />
+  );
+};
+
 const Events = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -18,6 +60,9 @@ const Events = () => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const { user } = useAuth();
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [photoList, setPhotoList] = useState<string[]>([]);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // Load events and registered events from backend
   useEffect(() => {
@@ -43,7 +88,8 @@ const Events = () => {
             organizer: e.organizer || "",
             participants: Array.isArray(e.participants) ? e.participants.length : (e.participants || 0),
             capacity: e.capacity ?? 0,
-            image: e.image || "📅",
+            image: (Array.isArray(e.photos) && e.photos.length > 0) ? e.photos[0] : (e.image || "📅"),
+            photos: Array.isArray(e.photos) ? e.photos : (e.photos ? [e.photos] : []),
           }));
           setEvents(mapped);
         } else {
@@ -294,7 +340,21 @@ const Events = () => {
                 <CardHeader className="pb-4">
                   <div className="flex justify-between">
                     <div className="flex space-x-3 items-start">
-                      <div className="text-4xl">{event.image}</div>
+                      <EventImage src={event.image} alt={event.title} onClick={async () => {
+                        // open modal and load photos for this event
+                        setPhotoList([]);
+                        setPhotoIndex(0);
+                        setPhotoModalOpen(true);
+                        try {
+                          const res = await fetch(`http://localhost:5000/api/events/${event.id}/photos`);
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (Array.isArray(data)) setPhotoList(data);
+                          }
+                        } catch (e) {
+                          console.warn('Failed to load event photos', e);
+                        }
+                      }} />
                       <div>
                         <CardTitle className="text-lg">{event.title}</CardTitle>
                         <div className="flex flex-wrap gap-2 mt-1">
@@ -398,7 +458,7 @@ const Events = () => {
                       <CardHeader className="pb-4">
                         <div className="flex justify-between">
                           <div className="flex space-x-3 items-start">
-                            <div className="text-4xl">{event.image}</div>
+                            <EventImage src={event.image} alt={event.title} />
                             <div>
                               <CardTitle className="text-lg">{event.title}</CardTitle>
                               <div className="flex flex-wrap gap-2 mt-1">
@@ -442,7 +502,7 @@ const Events = () => {
                             Add to Calendar
                           </Button>
                         </div>
-                        <Button variant="outline" className="text-red-600 w-full sm:w-auto" onClick={async () => {
+                          <Button variant="outline" className="text-red-600 w-full sm:w-auto whitespace-nowrap min-w-[160px]" onClick={async () => {
                           try {
                             const res = await authFetch(`http://localhost:5000/api/events/${event.id}/leave`, { method: 'POST' });
                             const data = await res.json().catch(()=>({}));
@@ -490,7 +550,7 @@ const Events = () => {
               <CardHeader className="pb-4">
                 <div className="flex justify-between">
                   <div className="flex space-x-3 items-start">
-                    <div className="text-4xl">{event.image}</div>
+                    <EventImage src={event.image} alt={event.title} />
                     <div>
                       <CardTitle className="text-lg">{event.title}</CardTitle>
                       <div className="flex flex-wrap gap-2 mt-1">
@@ -619,6 +679,36 @@ const Events = () => {
           </Dialog>
         )}
       </div>
+
+      {/* Photo modal for event images */}
+      <Dialog open={photoModalOpen} onOpenChange={(open) => { if (!open) { setPhotoModalOpen(false); setPhotoList([]); } }}>
+        <DialogContent className="sm:max-w-3xl w-full max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle>Event Photos</DialogTitle>
+            <DialogDescription>Browse uploaded photos by the organiser</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {photoList.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-gray-500">No photos available</div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={() => setPhotoIndex(i => Math.max(0, i-1))} disabled={photoIndex <= 0}>
+                  ◀
+                </Button>
+                <div className="flex-1">
+                  <img src={photoList[photoIndex].startsWith('/') ? `${import.meta.env.VITE_API_BASE || 'http://localhost:5000'}${photoList[photoIndex]}` : photoList[photoIndex]} alt={`photo-${photoIndex}`} className="w-full h-96 object-contain" />
+                </div>
+                <Button variant="ghost" onClick={() => setPhotoIndex(i => Math.min(photoList.length - 1, i+1))} disabled={photoIndex >= photoList.length - 1}>
+                  ▶
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setPhotoModalOpen(false)} className="bg-green-600 hover:bg-green-700">Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

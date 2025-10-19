@@ -26,11 +26,12 @@ const OrganiserEventForm = () => {
     points: "",
     organizer: "",
     image: "", // will store URL like /uploads/xxx.png
+    photos: [] as string[],
   });
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const onChange = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const onChange = (key: keyof typeof form, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
   const readFileAsDataUrl = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -53,7 +54,11 @@ const OrganiserEventForm = () => {
       if (!res.ok || !data?.url) {
         throw new Error(data?.message || "Upload failed");
       }
-      onChange("image", data.url);
+      // push into photos array and set image to first photo if not set
+      setForm(prev => {
+        const prevPhotos = Array.isArray((prev as any).photos) ? (prev as any).photos : [];
+        return { ...prev, photos: [...prevPhotos, data.url], image: prev.image || data.url } as typeof prev;
+      });
       toast({ title: "Image uploaded", description: "Image attached to event.", className: "bg-green-50 border-green-200" });
     } catch (err: any) {
       console.error("Upload failed", err);
@@ -93,6 +98,7 @@ const OrganiserEventForm = () => {
         points: Number(form.points) || 0,
         organizer: form.organizer.trim(),
         image: form.image.trim(),
+        photos: Array.isArray(form.photos) ? form.photos : [],
       };
       const res = await authFetch("http://localhost:5000/api/events", {
         method: "POST",
@@ -225,12 +231,18 @@ const OrganiserEventForm = () => {
                   onDrop={(e) => { e.preventDefault(); setDragOver(false); const file = e.dataTransfer.files?.[0]; if (file) uploadImage(file); }}
                 >
                   <p>Drag and drop an image here, or choose a file below.</p>
-                  {form.image && (
+                  {Array.isArray(form.photos) && form.photos.length > 0 ? (
+                    <div className="mt-2 flex items-center gap-3">
+                      {form.photos.map((p, idx) => (
+                        <img key={p+idx} src={p} alt={`preview-${idx}`} className="h-16 w-16 object-cover rounded" />
+                      ))}
+                    </div>
+                  ) : form.image ? (
                     <div className="mt-2 flex items-center gap-3">
                       <img src={form.image} alt="preview" className="h-16 w-16 object-cover rounded" />
                       <span className="text-gray-600">{form.image}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 <div className="mt-2 flex items-center gap-3">
                   <input

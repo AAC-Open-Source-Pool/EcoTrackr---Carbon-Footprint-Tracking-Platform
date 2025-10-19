@@ -8,10 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BookOpen, Check, X, Award, Lightbulb, Earth, Star } from "lucide-react";
 import { addPoints, scopedKey } from "@/lib/carbon";
+import { fetchTopicRelatedQuestions, formatTriviaQuestion } from "@/services/triviaApi";
 
 const LearnQuiz = () => {
   const [activeTopic, setActiveTopic] = useState("all");
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswerChecked, setIsAnswerChecked] = useState(false);
@@ -232,7 +234,18 @@ const LearnQuiz = () => {
     ],
   };
 
-  const pickQuestions = (topic: string, count: number) => {
+  const pickQuestions = async (topic: string, count: number) => {
+    // Try to fetch topic-related questions from Open Trivia Database first
+    try {
+      const triviaQuestions = await fetchTopicRelatedQuestions(topic, count);
+      if (triviaQuestions.length > 0) {
+        return triviaQuestions.map(formatTriviaQuestion);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch trivia questions, falling back to local questions:', error);
+    }
+
+    // Fallback to local questions if API fails
     const pool = banks[topic] || banks.basics;
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.min(count, shuffled.length));
@@ -241,16 +254,31 @@ const LearnQuiz = () => {
     ? quizzes
     : quizzes.filter((quiz) => quiz.topic === activeTopic);
 
-  const handleStartQuiz = (quiz: any) => {
+  const handleStartQuiz = async (quiz: any) => {
     // block if on cooldown
     if (!canAttempt(quiz.id)) return;
-    // Generate question set per theme
-    const questions = pickQuestions(quiz.topic, quiz.questionCount);
-    setActiveQuiz({ ...quiz, questions });
-    setCurrentQuestionIndex(0);
-    setQuizScore(0);
-    setSelectedAnswer(null);
-    setIsAnswerChecked(false);
+
+    setIsLoadingQuestions(true);
+    try {
+      // Generate question set per theme
+      const questions = await pickQuestions(quiz.topic, quiz.questionCount);
+      setActiveQuiz({ ...quiz, questions });
+      setCurrentQuestionIndex(0);
+      setQuizScore(0);
+      setSelectedAnswer(null);
+      setIsAnswerChecked(false);
+    } catch (error) {
+      console.error('Error loading quiz questions:', error);
+      // Fallback to local questions if API fails
+      const fallbackQuestions = pickQuestions(quiz.topic, quiz.questionCount);
+      setActiveQuiz({ ...quiz, questions: fallbackQuestions });
+      setCurrentQuestionIndex(0);
+      setQuizScore(0);
+      setSelectedAnswer(null);
+      setIsAnswerChecked(false);
+    } finally {
+      setIsLoadingQuestions(false);
+    }
   };
 
   const handleAnswerSelect = (answer: string) => {
@@ -352,12 +380,12 @@ const LearnQuiz = () => {
                   <div className="mt-auto">
                     <Dialog>
                     <DialogTrigger asChild>
-                      <Button 
+                      <Button
                         className={`w-full ${locked ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
                         onClick={() => !locked && handleStartQuiz(quiz)}
-                        disabled={locked}
+                        disabled={locked || isLoadingQuestions}
                       >
-                        {locked ? `Available in ${formatRemaining(remainingTime(quiz.id))}` : (rec ? "Start Again" : "Start Quiz")}
+                        {locked ? `Available in ${formatRemaining(remainingTime(quiz.id))}` : isLoadingQuestions ? "Loading Questions..." : (rec ? "Start Again" : "Start Quiz")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-3xl w-full max-w-[900px] h-[88vh] overflow-hidden">

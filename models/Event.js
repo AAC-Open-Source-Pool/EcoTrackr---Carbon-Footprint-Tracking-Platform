@@ -62,6 +62,10 @@ const eventSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  photos: [{
+    type: String,
+    default: []
+  }],
   isActive: {
     type: Boolean,
     default: true
