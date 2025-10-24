@@ -217,16 +217,27 @@ export async function getWeeklyData(): Promise<WeeklyDatum[]> {
   const { success, data } = await getCarbonStats();
   const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   if (success && data && Array.isArray(data.weekly) && data.weekly.length > 0) {
-    // Convert backend dates (UTC) to local dates so the weekday aligns with the client
+    // Convert backend dates to local dates so the weekday aligns with the client.
+    // When backend returns a plain YYYY-MM-DD string, avoid `new Date("YYYY-MM-DD")`
+    // which is treated as UTC midnight and can shift the calendar day in some timezones.
     return data.weekly.map((d, i) => {
       const rawDate = d.date ? String(d.date) : '';
       let dateStr = rawDate;
       let label = labels[i] || rawDate;
       if (rawDate) {
-        const dt = new Date(rawDate);
-        const localDt = new Date(dt.getTime());
-        dateStr = toISODate(localDt);
-        label = localDt.toLocaleDateString('en-US', { weekday: 'short' });
+        // If backend provided a plain YYYY-MM-DD, use it directly and calculate
+        // a local Date via numeric components so we don't get UTC shifting.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+          dateStr = rawDate;
+          const parts = rawDate.split('-').map((p) => Number(p));
+          const localDt = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+          label = localDt.toLocaleDateString('en-US', { weekday: 'short' });
+        } else {
+          // For full ISO timestamps, construct a Date and take its local Y/M/D
+          const dt = new Date(rawDate);
+          dateStr = toISODate(new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+          label = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).toLocaleDateString('en-US', { weekday: 'short' });
+        }
       }
       return {
         label,

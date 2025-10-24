@@ -59,7 +59,7 @@ const Dashboard = () => {
 
   const getQuizCompletedMap = (): Record<string, { score: number; completedAt: number }> => {
     try {
-      const raw = localStorage.getItem("quiz:completed");
+      const raw = localStorage.getItem(scopedKey('quiz:completed')) || localStorage.getItem("quiz:completed");
       const parsed: Record<string, any> = raw ? JSON.parse(raw) : {};
       const normalized: Record<string, { score: number; completedAt: number }> = {};
       Object.keys(parsed || {}).forEach((k) => {
@@ -187,7 +187,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900">{actionsTaken}</div>
-              <p className="text-xs text-blue-700 mt-1">Quizzes completed + Carbon entry saved today</p>
+              <p className="text-xs text-blue-700 mt-1">Quizzes completed </p>
             </CardContent>
           </Card>
 
