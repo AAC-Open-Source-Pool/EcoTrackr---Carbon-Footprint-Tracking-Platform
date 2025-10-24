@@ -233,10 +233,12 @@ const Login = () => {
         throw new Error('Authentication failed: No token received');
       }
 
-      // Set authentication data
-      setToken(data.token);
-      setUserRole(role);
-      setUserData({ ...data.user, role });
+  // Set authentication data
+  setToken(data.token);
+  // Persist the user data first so setUserRole can update it reliably
+  const resolvedRole = data.role || role;
+  setUserData({ ...data.user, role: resolvedRole });
+  setUserRole(resolvedRole);
 
       // Redirect based on the role returned by the server or the selected role
       const redirectRole = data.role || role;

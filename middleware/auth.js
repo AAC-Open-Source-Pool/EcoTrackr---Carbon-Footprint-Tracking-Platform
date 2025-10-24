@@ -14,13 +14,16 @@ export default async function auth(req, res, next) {
     if (decoded.user && decoded.user.id) {
       const user = await User.findById(decoded.user.id);
       if (!user) return res.status(404).json({ message: "User not found" });
+      // Attach both old and new property names for compatibility
       req.user = user;
+      req.userData = user;
     } 
     // Check if it's an NGO token
     else if (decoded.ngo && decoded.ngo.id) {
       const ngo = await NGO.findById(decoded.ngo.id);
       if (!ngo) return res.status(404).json({ message: "NGO not found" });
       req.ngo = ngo;
+      req.userData = ngo; // reuse userData name for downstream code expecting it
     } 
     // Invalid token payload
     else {

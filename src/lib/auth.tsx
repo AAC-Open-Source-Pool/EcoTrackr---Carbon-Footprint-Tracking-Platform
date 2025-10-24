@@ -219,6 +219,7 @@ export const clearToken = (): void => {
 };
 
 export const setUserData = (data: any): void => {
+<<<<<<< Updated upstream
   safeLocalStorage.setItem('userData', JSON.stringify(data));
   // Also ensure a minimal `user` entry exists for role-based routing and guards.
   try {
@@ -231,6 +232,19 @@ export const setUserData = (data: any): void => {
     safeLocalStorage.setItem('user', JSON.stringify(minimalUser));
   } catch (e) {
     console.error('Failed to write minimal user data:', e);
+=======
+  // Persist canonical 'user' key used throughout the app
+  try {
+    safeLocalStorage.setItem('user', JSON.stringify(data));
+    // Keep backwards-compatible 'userData' key as well
+    safeLocalStorage.setItem('userData', JSON.stringify(data));
+    // If role is present on the data, persist it under 'userRole' for role-based routing
+    if (data && data.role) {
+      safeLocalStorage.setItem('userRole', data.role);
+    }
+  } catch (err) {
+    console.error('Failed to set user data in localStorage', err);
+>>>>>>> Stashed changes
   }
 };
 
@@ -253,6 +267,12 @@ export const setUserRole = (role: UserRole): void => {
     // If no user exists in storage, create a minimal one so role checks work
     const minimalUser = { id: `user-${Math.random().toString(36).substr(2, 9)}`, email: '', role };
     safeLocalStorage.setItem('user', JSON.stringify(minimalUser));
+  }
+  // Also persist a standalone userRole key used by some parts of the app
+  try {
+    safeLocalStorage.setItem('userRole', role);
+  } catch (err) {
+    console.error('Failed to set userRole in localStorage', err);
   }
 };
 

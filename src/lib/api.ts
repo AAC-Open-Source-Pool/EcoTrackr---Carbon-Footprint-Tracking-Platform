@@ -19,9 +19,11 @@ export const saveCarbonEntry = async (entry: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
+      // Include co2 when provided (for manual entries)
       body: JSON.stringify({
         activityType: entry.activityType,
         details: entry.details,
+        ...(entry.co2 !== undefined ? { co2: entry.co2 } : {}),
       }),
     });
 

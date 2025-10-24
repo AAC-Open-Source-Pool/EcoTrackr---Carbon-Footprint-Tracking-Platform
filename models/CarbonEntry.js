@@ -8,7 +8,7 @@ const carbonEntrySchema = new mongoose.Schema({
   },
   activityType: {
     type: String,
-    enum: ["car", "bike", "bus", "train", "flight"],
+    enum: ["car", "bike", "bus", "train", "flight", "manual"],
     required: true,
   },
   details: {
