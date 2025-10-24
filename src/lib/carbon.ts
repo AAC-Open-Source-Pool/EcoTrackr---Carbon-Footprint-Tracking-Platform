@@ -32,7 +32,13 @@ export const scopedKey = (base: string): string => `${base}::${getCurrentUserId(
 const getEntriesKey = () => scopedKey("carbon:entries");
 const getPointsKey = () => scopedKey("carbon:points");
 
-const toISODate = (d: Date) => d.toISOString().slice(0, 10);
+export const toISODate = (d: Date) => {
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 const getStartOfDay = (d = new Date()) => {
   const dt = new Date(d);
@@ -92,12 +98,15 @@ export async function getEntries(): Promise<DailyEntry[]> {
         let localDateStr = '';
         let savedAt = Date.now();
         if (rawDate) {
-          const dt = new Date(rawDate);
-          // Convert UTC midnight to local date by adjusting for timezone offset
-          const localMs = dt.getTime() - dt.getTimezoneOffset() * 60000;
-          const localDt = new Date(localMs);
-          localDateStr = localDt.toISOString().slice(0, 10);
-          savedAt = dt.getTime();
+          // If backend sends a simple YYYY-MM-DD string, use it as-is (it's already a calendar day)
+          if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+            localDateStr = rawDate;
+          } else {
+            const dt = new Date(rawDate);
+            // compute local YYYY-MM-DD using local components
+            localDateStr = toISODate(dt);
+            savedAt = dt.getTime();
+          }
         }
         return {
           date: localDateStr,
@@ -215,9 +224,8 @@ export async function getWeeklyData(): Promise<WeeklyDatum[]> {
       let label = labels[i] || rawDate;
       if (rawDate) {
         const dt = new Date(rawDate);
-        const localMs = dt.getTime() - dt.getTimezoneOffset() * 60000;
-        const localDt = new Date(localMs);
-        dateStr = localDt.toISOString().slice(0,10);
+        const localDt = new Date(dt.getTime());
+        dateStr = toISODate(localDt);
         label = localDt.toLocaleDateString('en-US', { weekday: 'short' });
       }
       return {
@@ -243,7 +251,7 @@ export async function getWeeklyData(): Promise<WeeklyDatum[]> {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().slice(0,10);
+      const dateStr = toISODate(d);
       const entry = entries.find(e => e.date === dateStr);
       weekData.push({
         label: labels[i],

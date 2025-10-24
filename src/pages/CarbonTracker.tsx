@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator, Lightbulb, Car, Utensils, BarChart3 } from "lucide-react";
-import { getCooldownRemainingMs, getWeeklyData, saveTodayEmissions, getPoints, getEntries } from "@/lib/carbon";
+import { getCooldownRemainingMs, getWeeklyData, saveTodayEmissions, getPoints, getEntries, toISODate } from "@/lib/carbon";
 
 // Function to generate empty weekly data with all values set to 0
 const getEmptyWeeklyData = () => {
@@ -151,7 +151,7 @@ const CarbonTracker = () => {
             for (let i = 0; i < 7; i++) {
               const d = new Date(monday);
               d.setDate(monday.getDate() + i);
-              const dateStr = d.toISOString().slice(0,10);
+              const dateStr = toISODate(d);
               const entry = entries.find(e => e.date === dateStr);
               weekData.push({ label: labels[i], date: dateStr, value: entry ? entry.value : 0 });
             }
@@ -214,7 +214,7 @@ const CarbonTracker = () => {
           for (let i = 0; i < 7; i++) {
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
-            const dateStr = d.toISOString().slice(0,10);
+            const dateStr = toISODate(d);
             const entry = entries.find(e => e.date === dateStr);
             weekData.push({ label: labels[i], date: dateStr, value: entry ? entry.value : 0 });
           }
