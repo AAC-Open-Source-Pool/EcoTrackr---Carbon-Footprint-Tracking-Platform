@@ -2,6 +2,8 @@ import cors from "cors";
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.js";
 import googleAuthRouter from "./routes/google.js";
@@ -19,46 +21,67 @@ import contactRoutes from "./routes/contact.js";
 import registrationsRoutes from "./routes/registrations.js";
 import quizzesRoutes from "./routes/quizzes.js";
 import communityRoutes from "./routes/community.js";
-import path from "path";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ CORS for React/Vite frontend (support 5173/5174 or env override)
+// Needed because this file uses ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// --------------------
+// CORS
+// --------------------
 const ALLOWED_ORIGINS = [
-  process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+  process.env.FRONTEND_ORIGIN,
+  "http://localhost:5173",
   "http://localhost:5174",
-];
+].filter(Boolean);
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin like curl or mobile apps
       if (!origin) return callback(null, true);
-      if (ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost:')) return callback(null, true);
+
+      if (
+        ALLOWED_ORIGINS.includes(origin) ||
+        origin.startsWith("http://localhost:")
+      ) {
+        return callback(null, true);
+      }
+
       return callback(new Error(`CORS blocked from origin ${origin}`));
     },
     credentials: true,
   })
 );
 
+// --------------------
+// Middleware
+// --------------------
 app.use(express.json({ limit: "10mb" }));
-// Serve static uploaded files
-app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
-// ✅ MongoDB connection
-const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ecotrack';
+// --------------------
+// MongoDB
+// --------------------
+const mongoURI = process.env.MONGODB_URI;
 
-mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+if (!mongoURI) {
+  console.error("❌ MONGODB_URI is not configured");
+} else {
+  mongoose
+    .connect(mongoURI)
+    .then(() => console.log("✅ MongoDB connected successfully"))
+    .catch((err) =>
+      console.error("❌ MongoDB connection error:", err)
+    );
+}
 
-// ✅ Routes
+// --------------------
+// API routes
+// --------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/google", googleAuthRouter);
 app.use("/api/profile", profileRoutes);
@@ -76,7 +99,33 @@ app.use("/api/registrations", registrationsRoutes);
 app.use("/api/quizzes", quizzesRoutes);
 app.use("/api/community", communityRoutes);
 
-// ✅ Start server
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+// --------------------
+// Serve uploaded files
+// --------------------
+app.use(
+  "/uploads",
+  express.static(path.resolve(process.cwd(), "uploads"))
 );
+
+// --------------------
+// Serve React production build
+// --------------------
+const frontendPath = path.join(__dirname, "dist");
+
+app.use(express.static(frontendPath));
+
+// React Router fallback
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+// --------------------
+// Start server
+// --------------------
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
