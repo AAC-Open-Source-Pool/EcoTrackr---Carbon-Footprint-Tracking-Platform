@@ -57,6 +57,8 @@ router.post("/", async (req, res) => {
     console.error("Auth0 authentication error:", err);
     res.status(500).json({ message: "Auth0 authentication failed: " + err.message });
   }
+});
+
 // ✅ GET /api/auth/auth0/me (Returns current OIDC user session info)
 router.get("/me", (req, res) => {
   if (req.oidc && req.oidc.isAuthenticated()) {
