@@ -74,10 +74,17 @@ const Login = () => {
   }, [isAuthenticated, auth0User, API_BASE, navigate, role]);
 
   const handleAuth0SignIn = async () => {
+    const domain = import.meta.env.VITE_AUTH0_DOMAIN;
+    const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+    if (!domain || !clientId || domain.includes('dev-ecotrackr') || clientId.includes('ecotrackr_auth0')) {
+      alert("⚠️ Auth0 Credentials Missing or Unconfigured!\n\nTo enable Auth0 login:\n1. Create a free Auth0 application at https://auth0.com\n2. Add VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID to your .env file.\n3. Add http://localhost:5173 to Allowed Callback URLs in your Auth0 Application Settings.");
+      return;
+    }
     try {
       await loginWithPopup();
     } catch (err: any) {
       console.error("Auth0 popup error:", err);
+      alert(`Auth0 Error: ${err.message || 'Popup blocked or failed to open'}`);
     }
   };
 
