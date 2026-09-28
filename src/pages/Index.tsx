@@ -72,14 +72,8 @@ const Index = () => {
             </span>
           </h1>
         </Reveal>
-
-        {/* 3D WebGL Digital Earth Centerpiece */}
-        <Reveal direction="none" delay={0.3} className="my-6 w-full flex justify-center">
-          <EarthScene carbonLevel={estimatedCo2} ecoPoints={250} className="w-full max-w-[600px] h-[480px]" />
-        </Reveal>
-
-        <Reveal direction="up" delay={0.4}>
-          <p className="text-[#B7C5BE] text-base sm:text-lg text-center max-w-2xl font-sans leading-relaxed">
+        <Reveal direction="up" delay={0.3}>
+          <p className="text-[#B7C5BE] text-base sm:text-lg text-center max-w-2xl font-sans leading-relaxed mt-6">
             Every journey, every kilowatt, every choice leaves a footprint. EcoTrack provides real-time planetary carbon telemetry to measure and minimize your impact.
           </p>
         </Reveal>
