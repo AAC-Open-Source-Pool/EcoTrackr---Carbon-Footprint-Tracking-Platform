@@ -140,6 +140,14 @@ const App = () => {
                     </ProtectedRoute>
                   } />
                   
+                  <Route path="/tracker" element={
+                    <ProtectedRoute>
+                      <RoleRoute roles={['user']}>
+                        <CarbonTracker />
+                      </RoleRoute>
+                    </ProtectedRoute>
+                  } />
+
                   <Route path="/carbon-tracker" element={
                     <ProtectedRoute>
                       <RoleRoute roles={['user']}>
@@ -147,7 +155,7 @@ const App = () => {
                       </RoleRoute>
                     </ProtectedRoute>
                   } />
-                  
+
                   <Route path="/rewards" element={
                     <ProtectedRoute>
                       <RoleRoute roles={['user']}>
@@ -155,9 +163,21 @@ const App = () => {
                       </RoleRoute>
                     </ProtectedRoute>
                   } />
+
+                  <Route path="/learn" element={
+                    <ProtectedRoute>
+                      <RoleRoute roles={['user']}>
+                        <LearnQuiz />
+                      </RoleRoute>
+                    </ProtectedRoute>
+                  } />
                   
                   <Route path="/ecomap" element={
-                    <Navigate to="/eco-map" replace />
+                    <ProtectedRoute>
+                      <RoleRoute roles={['user']}>
+                        <EcoMap />
+                      </RoleRoute>
+                    </ProtectedRoute>
                   } />
                   
                   <Route path="/eco-map" element={
