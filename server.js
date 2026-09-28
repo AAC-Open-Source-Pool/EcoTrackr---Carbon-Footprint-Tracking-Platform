@@ -29,13 +29,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Needed because this file uses ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// --------------------
-// CORS
-// --------------------
 const ALLOWED_ORIGINS = [
   process.env.FRONTEND_ORIGIN,
   "http://localhost:5173",
@@ -61,14 +57,8 @@ app.use(
   })
 );
 
-// --------------------
-// Middleware
-// --------------------
 app.use(express.json({ limit: "10mb" }));
 
-// --------------------
-// Auth0 OpenID Connect Middleware
-// --------------------
 const auth0Config = {
   authRequired: false,
   auth0Logout: true,
@@ -81,7 +71,6 @@ const auth0Config = {
 
 app.use(auth(auth0Config));
 
-// Signup OIDC route handler
 app.get('/signup', (req, res) =>
   res.oidc.login({
     returnTo: '/',
@@ -89,10 +78,6 @@ app.get('/signup', (req, res) =>
   })
 );
 
-
-// --------------------
-// MongoDB
-// --------------------
 const mongoURI = process.env.MONGODB_URI;
 
 if (!mongoURI) {
@@ -106,16 +91,10 @@ if (!mongoURI) {
     );
 }
 
-// --------------------
-// Health check route
-// --------------------
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// --------------------
-// API routes
-// --------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/google", googleAuthRouter);
 app.use("/api/auth/auth0", auth0AuthRouter);
@@ -135,22 +114,15 @@ app.use("/api/registrations", registrationsRoutes);
 app.use("/api/quizzes", quizzesRoutes);
 app.use("/api/community", communityRoutes);
 
-// --------------------
-// Serve uploaded files
-// --------------------
 app.use(
   "/uploads",
   express.static(path.resolve(process.cwd(), "uploads"))
 );
 
-// --------------------
-// Serve React production build
-// --------------------
 const frontendPath = path.join(__dirname, "dist");
 
 app.use(express.static(frontendPath));
 
-// React Router fallback
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) {
     return next();
@@ -163,9 +135,6 @@ app.get("*", (req, res, next) => {
   });
 });
 
-// --------------------
-// Start server
-// --------------------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

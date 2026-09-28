@@ -4,7 +4,6 @@ import User from "../models/user.js";
 
 const router = express.Router();
 
-// ✅ POST /api/auth/auth0
 router.post("/", async (req, res) => {
   try {
     const { email, name, picture, sub, role } = req.body || {};
@@ -28,7 +27,7 @@ router.post("/", async (req, res) => {
       user = new User({
         username,
         email,
-        password: "", // Auth0 authenticated user
+        password: "",
         role: userRole,
         profilePicture: picture || "",
       });
@@ -59,7 +58,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ GET /api/auth/auth0/me (Returns current OIDC user session info)
 router.get("/me", (req, res) => {
   if (req.oidc && req.oidc.isAuthenticated()) {
     return res.json({
