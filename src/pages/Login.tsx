@@ -117,13 +117,16 @@ const Login = () => {
           <path d="M3.96528 10.71C3.80556 10.17 3.71528 9.59325 3.71528 9C3.71528 8.40675 3.80556 7.83 3.96528 7.29V4.95825H0.149414C-0.0498047 5.66212 -0.166626 6.40275 -0.166626 7.16662C-0.166626 7.9305 -0.0498047 8.67112 0.149414 9.375L3.96528 10.71Z" fill="#FBBC05"/>
           <path d="M9 3.57955C10.4948 3.57955 11.8236 4.08398 12.8889 5.06719L15.0118 2.94422C13.4861 1.53047 11.4306 0.666626 9 0.666626C4.96007 0.666626 1.60851 2.68331 0.149414 5.62478L3.96528 7.29C4.67014 5.16259 6.65903 3.57955 9 3.57955Z" fill="#EA4335"/>
         </svg>
-        <span>Continue with Google (Fallback)</span>
+        <span>Continue with Google</span>
       `;
       fallback.onclick = () => {
-        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=code&scope=profile email&access_type=offline`;
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.prompt();
+        } else {
+          alert(`Google Sign-In configuration required: Please add "${window.location.origin}" to Authorized JavaScript Origins in your Google Cloud Console for Client ID: ${GOOGLE_CLIENT_ID}`);
+        }
       };
       googleBtn.appendChild(fallback);
-      console.warn('Google fallback button rendered.');
     }
   }, [GOOGLE_CLIENT_ID]);
 
