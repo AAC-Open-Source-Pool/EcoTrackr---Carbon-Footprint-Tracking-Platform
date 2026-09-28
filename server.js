@@ -76,6 +76,7 @@ const auth0Config = {
   baseURL: process.env.BASE_URL || "http://localhost:5000",
   clientID: process.env.CLIENT_ID || "j6h2Ua2hbmyeyI5ZgzN6LwHzS6YkRU3B",
   issuerBaseURL: process.env.ISSUER_BASE_URL || "https://dev-4fy07vc2iti7f4go.us.auth0.com",
+  ...(process.env.CLIENT_SECRET ? { clientSecret: process.env.CLIENT_SECRET } : { clientAuthMethod: "none" }),
 };
 
 app.use(auth(auth0Config));
