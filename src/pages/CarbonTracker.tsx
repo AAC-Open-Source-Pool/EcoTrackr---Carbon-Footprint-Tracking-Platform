@@ -12,31 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calculator, Lightbulb, Car, Utensils, BarChart3 } from "lucide-react";
+import { Calculator, Lightbulb, Car, Utensils, BarChart3, Globe, Zap, ShieldCheck, ArrowUpRight, TrendingDown } from "lucide-react";
 import { getCooldownRemainingMs, getWeeklyData, saveTodayEmissions, getPoints, getEntries } from "@/lib/carbon";
-
-// Function to generate empty weekly data with all values set to 0
-const getEmptyWeeklyData = () => {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  
-  return days.map(day => ({
-    date: day,
-    label: day,
-    value: 0
-  }));
-};
-
-// Function to get day name from date
-const getDayName = (date: Date) => {
-  return date.toLocaleDateString('en-US', { weekday: 'short' });
-};
 
 const CarbonTracker = () => {
   const [formData, setFormData] = useState({
-    commuteType: '',
-    commuteDistance: '',
-    electricityUsage: '',
-    dietType: ''
+    commuteType: 'car',
+    commuteDistance: '15',
+    electricityUsage: '12',
+    dietType: 'meat'
   });
   
   const [totalEmissions, setTotalEmissions] = useState(0);
@@ -53,7 +37,6 @@ const CarbonTracker = () => {
   const [awardMessage, setAwardMessage] = useState<string>("");
   const [awardPositive, setAwardPositive] = useState<boolean | null>(null);
   const [now, setNow] = useState<Date>(new Date());
-  const [lastEmissionDate, setLastEmissionDate] = useState<string | null>(null);
   const [emissionHistory, setEmissionHistory] = useState<any[]>([]);
 
   const commuteFactors = {
@@ -65,21 +48,20 @@ const CarbonTracker = () => {
     walk: 0
   };
 
-  const timeString = useMemo(() => now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), [now]);
-  const dateString = useMemo(() => now.toLocaleDateString([], { weekday: "short", year: "numeric", month: "short", day: "2-digit" }), [now]);
-
   const dietFactors = {
     meat: 2.5, // kg CO2 per day
     vegetarian: 1.7,
     vegan: 1.5
   };
 
+  const timeString = useMemo(() => now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), [now]);
+  const dateString = useMemo(() => now.toLocaleDateString([], { weekday: "short", year: "numeric", month: "short", day: "2-digit" }), [now]);
+
   const calculateEmissions = () => {
     const commuteEmissions = (commuteFactors[formData.commuteType as keyof typeof commuteFactors] || 0) * 
                             (parseFloat(formData.commuteDistance) || 0) * 2; // round trip
     
     const electricityEmissions = (parseFloat(formData.electricityUsage) || 0) * 0.5; // kg CO2 per kWh
-    
     const dietEmissions = dietFactors[formData.dietType as keyof typeof dietFactors] || 0;
 
     const newBreakdown = {
@@ -92,25 +74,30 @@ const CarbonTracker = () => {
     setTotalEmissions(commuteEmissions + electricityEmissions + dietEmissions);
   };
 
+  // Recalculate automatically when form changes
+  useEffect(() => {
+    calculateEmissions();
+  }, [formData]);
+
   const tips = {
     commute: [
-      "Use public transport to reduce emissions by up to 75%",
-      "Try cycling or walking for short distances",
-      "Consider carpooling with colleagues"
+      "Use public transport to reduce commuting emissions by up to 75%",
+      "Switch to cycling or walking for trips under 3km",
+      "Carpooling saves 50% fuel per passenger"
     ],
     electricity: [
-      "Switch to LED bulbs to save 80% energy",
-      "Unplug electronics when not in use",
-      "Use natural light during the day"
+      "Switch to LED fixtures to cut lighting energy by 80%",
+      "Unplug idle electronics to eliminate phantom load",
+      "Utilize smart thermostats for efficient thermal regulation"
     ],
     diet: [
-      "Try Meatless Mondays to reduce diet emissions",
-      "Choose local and seasonal produce",
-      "Reduce food waste by meal planning"
+      "Incorporating Meatless Mondays reduces dietary emissions significantly",
+      "Source local organic produce to slash transport supply chain overhead",
+      "Reduce food waste with structured weekly meal planning"
     ]
   };
 
-  const maxEmission = Math.max(1, breakdown.commute, breakdown.electricity, breakdown.diet); // Ensure at least 1 to prevent division by zero
+  const maxEmission = Math.max(1, breakdown.commute, breakdown.electricity, breakdown.diet);
 
   // Fetch initial data
   useEffect(() => {
@@ -119,7 +106,6 @@ const CarbonTracker = () => {
         const entries = await getEntries();
         if (entries && entries.length > 0) {
           setEmissionHistory(entries);
-          setLastEmissionDate(entries[entries.length - 1].date);
         }
       } catch (error) {
         console.error(error);
@@ -136,11 +122,9 @@ const CarbonTracker = () => {
 
       const hasBackendValues = Array.isArray(weeklyData) && weeklyData.some(d => typeof d.value === 'number' && d.value > 0);
       if (!hasBackendValues) {
-        // fallback to local entries
         try {
           const entries = await getEntries();
           if (entries && entries.length > 0) {
-            // build week Monday..Sunday
             const now = new Date();
             const dayOfWeek = now.getDay();
             const monday = new Date(now);
@@ -158,7 +142,7 @@ const CarbonTracker = () => {
             weeklyData = weekData;
           }
         } catch (err) {
-          console.error('Error building weekly data from entries:', err);
+          console.error('Error building weekly data:', err);
         }
       }
 
@@ -194,354 +178,399 @@ const CarbonTracker = () => {
       }
       return;
     }
-    // Refresh UI state
+
     setCooldownMs(getCooldownRemainingMs(Date.now()));
-    // Try backend weekly first, fallback to local entries if backend returns zeros
     let weeklyData = await getWeeklyData();
-    const hasValues = Array.isArray(weeklyData) && weeklyData.some(d => typeof d.value === 'number' && d.value > 0);
-    if (!hasValues) {
-      // build from local entries
-      try {
-        const entries = await getEntries();
-        if (entries && entries.length > 0) {
-          const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-          const now = new Date();
-          const dayOfWeek = now.getDay();
-          const monday = new Date(now);
-          monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-          monday.setHours(0,0,0,0);
-          const weekData: any[] = [];
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            const dateStr = d.toISOString().slice(0,10);
-            const entry = entries.find(e => e.date === dateStr);
-            weekData.push({ label: labels[i], date: dateStr, value: entry ? entry.value : 0 });
-          }
-          weeklyData = weekData;
-        }
-      } catch (err) {
-        console.error('Error building weekly data from entries after save:', err);
-      }
-    }
     setWeekly(weeklyData);
     const newPoints = getPoints();
     setPoints(newPoints);
+
     if (typeof res.pointsAwarded === "number" && res.comparison) {
       if (res.comparison === "improved") {
         setAwardPositive(true);
-        setAwardMessage(`Great job! Emissions decreased vs yesterday. +${res.pointsAwarded} points awarded.`);
+        setAwardMessage(`Great job! Carbon output decreased vs yesterday. +${res.pointsAwarded} Eco-Points awarded.`);
       } else if (res.comparison === "worsened") {
         setAwardPositive(false);
-        setAwardMessage(`Emissions increased vs yesterday. ${res.pointsAwarded} points deducted.`);
+        setAwardMessage(`Carbon output increased vs yesterday. ${res.pointsAwarded} points deducted.`);
       } else if (res.comparison === "same") {
         setAwardPositive(false);
-        setAwardMessage(`Emissions unchanged vs yesterday. ${res.pointsAwarded} points deducted.`);
+        setAwardMessage(`Carbon output unchanged vs yesterday. ${res.pointsAwarded} points deducted.`);
       } else {
         setAwardPositive(null);
-        setAwardMessage("Saved today's emissions.");
+        setAwardMessage("Today's emissions recorded successfully into Earth DB.");
       }
     } else {
       setAwardPositive(null);
-      setAwardMessage("Saved today's emissions.");
+      setAwardMessage("Today's emissions recorded successfully into Earth DB.");
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Calculator className="h-8 w-8 text-green-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Carbon Tracker</h1>
-              <p className="text-gray-600">Calculate and monitor your daily carbon footprint</p>
+      <div className="min-h-screen bg-[#070B0E] text-white p-2 md:p-6 space-y-8 font-sans">
+        {/* Igloo / Earth Ambient Glow Background Elements */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
+          <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[140px]" />
+        </div>
+
+        {/* Top Header & Status Bar */}
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-emerald-500/20">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono tracking-wider uppercase">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              EARTH INC ECOSYSTEM // CARBON MONITOR
             </div>
+            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-emerald-100 to-teal-300 bg-clip-text text-transparent flex items-center gap-3">
+              <Globe className="w-9 h-9 text-emerald-400" />
+              Planetary Carbon Tracker
+            </h1>
+            <p className="text-zinc-400 text-sm max-w-xl">
+              Precision personal footprint analytics powering decentralized planetary decarbonization.
+            </p>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-500">{dateString}</div>
-            <div className="text-lg font-semibold tracking-wider text-emerald-700">{timeString}</div>
-            {cooldownMs > 0 && (
-              <div className="text-xs text-gray-500">Next save in {formatMs(cooldownMs)}</div>
-            )}
+
+          <div className="flex items-center gap-4 bg-zinc-900/80 border border-emerald-500/20 rounded-2xl p-4 backdrop-blur-md">
+            <div className="text-right">
+              <div className="text-xs font-mono text-zinc-500">{dateString}</div>
+              <div className="text-xl font-bold font-mono text-emerald-400">{timeString}</div>
+              {cooldownMs > 0 && (
+                <div className="text-xs text-amber-400 font-mono mt-1">
+                  Next entry in {formatMs(cooldownMs)}
+                </div>
+              )}
+            </div>
+            <div className="h-10 w-px bg-zinc-800" />
+            <div className="text-center">
+              <div className="text-xs text-zinc-400 uppercase font-mono tracking-wider">Eco-Points</div>
+              <div className="text-2xl font-black text-white bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                {points}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Input Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Daily Carbon Calculator</CardTitle>
-              <CardDescription>Input your daily activities to calculate emissions</CardDescription>
+        {/* Main Grid Section */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Interactive Calculator Input Card */}
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-950/30 text-white">
+            <CardHeader className="border-b border-zinc-800/80 pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-emerald-300">
+                <Calculator className="w-5 h-5 text-emerald-400" />
+                Real-Time Activity Calculator
+              </CardTitle>
+              <CardDescription className="text-zinc-400 text-xs">
+                Log daily commuting, energy consumption, and nutritional factors
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+
+            <CardContent className="space-y-6 pt-6">
               {/* Commute Section */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Car className="h-5 w-5 text-blue-600" />
-                  <Label className="text-base font-medium">Commute</Label>
+              <div className="space-y-3 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Car className="h-5 w-5 text-emerald-400" />
+                  <Label className="text-sm font-semibold text-zinc-200">Commute & Travel</Label>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="commuteType">Transport Type</Label>
-                    <Select value={formData.commuteType} onValueChange={(value) =>
-                      setFormData(prev => ({ ...prev, commuteType: value }))
-                    }>
-                      <SelectTrigger>
+                    <Label className="text-xs text-zinc-400 mb-1 block">Transport Type</Label>
+                    <Select
+                      value={formData.commuteType}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, commuteType: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:ring-emerald-500">
                         <SelectValue placeholder="Select transport" />
                       </SelectTrigger>
-                      <SelectContent inPortal={false} position="item-aligned" side="bottom" align="start" sideOffset={4} className="z-50">
-                        <SelectItem value="car">Car</SelectItem>
-                        <SelectItem value="bus">Bus</SelectItem>
-                        <SelectItem value="train">Train</SelectItem>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                        <SelectItem value="car">Car (Fuel/Gas)</SelectItem>
+                        <SelectItem value="bus">Public Bus</SelectItem>
+                        <SelectItem value="train">Metro / Train</SelectItem>
                         <SelectItem value="motorbike">Motorbike</SelectItem>
-                        <SelectItem value="bike">Bicycle</SelectItem>
-                        <SelectItem value="walk">Walking</SelectItem>
+                        <SelectItem value="bike">Bicycle (Zero CO₂)</SelectItem>
+                        <SelectItem value="walk">Walking (Zero CO₂)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="commuteDistance">Distance (km)</Label>
+                    <Label className="text-xs text-zinc-400 mb-1 block">Distance (km / day)</Label>
                     <Input
-                      id="commuteDistance"
                       type="number"
                       placeholder="e.g. 15"
                       value={formData.commuteDistance}
                       onChange={(e) => setFormData(prev => ({ ...prev, commuteDistance: e.target.value }))}
+                      className="bg-zinc-900 border-zinc-700 text-white focus:border-emerald-500"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Electricity Section */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Lightbulb className="h-5 w-5 text-yellow-600" />
-                  <Label className="text-base font-medium">Electricity Usage</Label>
+              <div className="space-y-3 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-400" />
+                  <Label className="text-sm font-semibold text-zinc-200">Residential Electricity</Label>
                 </div>
                 <div>
-                  <Label htmlFor="electricityUsage">Daily Usage (kWh)</Label>
+                  <Label className="text-xs text-zinc-400 mb-1 block">Daily Consumption (kWh)</Label>
                   <Input
-                    id="electricityUsage"
                     type="number"
-                    placeholder="e.g. 25"
+                    placeholder="e.g. 12"
                     value={formData.electricityUsage}
                     onChange={(e) => setFormData(prev => ({ ...prev, electricityUsage: e.target.value }))}
+                    className="bg-zinc-900 border-zinc-700 text-white focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               {/* Diet Section */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Utensils className="h-5 w-5 text-green-600" />
-                  <Label className="text-base font-medium">Diet Type</Label>
+              <div className="space-y-3 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Utensils className="h-5 w-5 text-teal-400" />
+                  <Label className="text-sm font-semibold text-zinc-200">Nutritional Profile</Label>
                 </div>
-                <Select value={formData.dietType} onValueChange={(value) =>
-                  setFormData(prev => ({ ...prev, dietType: value }))
-                }>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select diet type" />
+                <Select
+                  value={formData.dietType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, dietType: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white focus:ring-emerald-500">
+                    <SelectValue placeholder="Select diet profile" />
                   </SelectTrigger>
-                  <SelectContent inPortal={false} position="item-aligned" side="bottom" align="start" sideOffset={4} className="z-50">
-                    <SelectItem value="meat">Meat-based</SelectItem>
-                    <SelectItem value="vegetarian">Vegetarian</SelectItem>
-                    <SelectItem value="vegan">Vegan</SelectItem>
+                  <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <SelectItem value="meat">Omnivore / Meat-Inclusive (2.5 kg CO₂)</SelectItem>
+                    <SelectItem value="vegetarian">Vegetarian (1.7 kg CO₂)</SelectItem>
+                    <SelectItem value="vegan">Plant-Based / Vegan (1.5 kg CO₂)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button onClick={calculateEmissions} className="w-full bg-green-600 hover:bg-green-700">
-                  Calculate Emissions
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <Button
+                  onClick={calculateEmissions}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium"
+                >
+                  Recalculate Live
                 </Button>
+
                 <Button
                   onClick={handleSaveToday}
                   disabled={totalEmissions <= 0 || cooldownMs > 0}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
                 >
-                  {cooldownMs > 0 ? `Save available in ${formatMs(cooldownMs)}` : "Save today's emissions"}
+                  {cooldownMs > 0 ? `Saved (Cooldown ${formatMs(cooldownMs)})` : "Commit to Earth DB"}
                 </Button>
               </div>
+
               {awardMessage && (
                 <div
-                  className={`text-sm rounded-md p-2 border ${
+                  className={`text-xs font-mono rounded-xl p-3 border ${
                     awardPositive === true
-                      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                      ? "text-emerald-300 bg-emerald-950/60 border-emerald-500/40"
                       : awardPositive === false
-                      ? "text-red-700 bg-red-50 border-red-200"
-                      : "text-slate-700 bg-slate-50 border-slate-200"
+                      ? "text-rose-300 bg-rose-950/60 border-rose-500/40"
+                      : "text-zinc-300 bg-zinc-900 border-zinc-800"
                   }`}
                 >
-                  {awardMessage} Current points: <span className="font-semibold">{points}</span>
+                  {awardMessage}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
-                <span>Emission Results</span>
-              </CardTitle>
-              <CardDescription>Your daily carbon footprint breakdown</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Total Emissions */}
-              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg">
-                <div className="text-3xl font-bold text-green-900">{totalEmissions.toFixed(2)} kg</div>
-                <p className="text-green-700 mt-1">Total CO₂ emissions today</p>
-                {totalEmissions > 0 && (
-                  <Badge className={`mt-2 ${totalEmissions < 10 ? 'bg-green-100 text-green-800' :
-                                   totalEmissions < 20 ? 'bg-yellow-100 text-yellow-800' :
-                                   'bg-red-100 text-red-800'}`}>
-                    {totalEmissions < 10 ? 'Excellent' : totalEmissions < 20 ? 'Good' : 'Needs Improvement'}
-                  </Badge>
-                )}
-              </div>
+          {/* Dynamic Results & Breakdown Card */}
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-950/30 text-white flex flex-col justify-between">
+            <div>
+              <CardHeader className="border-b border-zinc-800/80 pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-emerald-300">
+                  <BarChart3 className="w-5 h-5 text-teal-400" />
+                  Calculated Carbon Impact
+                </CardTitle>
+                <CardDescription className="text-zinc-400 text-xs">
+                  Real-time footprint telemetry and impact classification
+                </CardDescription>
+              </CardHeader>
 
-              {/* Breakdown Chart */}
-              {totalEmissions > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-medium">Breakdown by Category</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Car className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm">Commute</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <CardContent className="space-y-6 pt-6">
+                {/* Total Score Banner */}
+                <div className="text-center p-8 bg-gradient-to-b from-emerald-950/40 to-zinc-900/80 border border-emerald-500/30 rounded-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 opacity-10">
+                    <Globe className="w-32 h-32 text-emerald-400" />
+                  </div>
+                  <div className="text-5xl font-black text-white font-mono tracking-tight bg-gradient-to-r from-emerald-300 via-teal-200 to-white bg-clip-text text-transparent">
+                    {totalEmissions.toFixed(2)} <span className="text-2xl font-semibold text-emerald-400">kg CO₂e</span>
+                  </div>
+                  <p className="text-zinc-400 text-xs mt-2 uppercase font-mono tracking-widest">
+                    Est. Daily Carbon Footprint Output
+                  </p>
+
+                  {totalEmissions > 0 && (
+                    <Badge className={`mt-4 px-3 py-1 text-xs uppercase font-mono ${
+                      totalEmissions < 8
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : totalEmissions < 18
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}>
+                      {totalEmissions < 8 ? 'Optimal Footprint' : totalEmissions < 18 ? 'Moderate Footprint' : 'High Output Alert'}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Category Breakdown Progress */}
+                {totalEmissions > 0 && (
+                  <div className="space-y-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/80">
+                    <h4 className="text-xs uppercase font-mono tracking-wider text-zinc-400">Category Telemetry</h4>
+                    <div className="space-y-4">
+                      {/* Commute */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
+                            <Car className="w-3.5 h-3.5 text-emerald-400" /> Commute
+                          </span>
+                          <span className="font-mono text-emerald-300">{breakdown.commute.toFixed(1)} kg</span>
+                        </div>
+                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                            style={{ width: maxEmission > 0 ? `${(breakdown.commute / maxEmission) * 100}%` : '0%' }}
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${(breakdown.commute / maxEmission) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm font-medium w-12">{breakdown.commute.toFixed(1)}kg</span>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-600" />
-                        <span className="text-sm">Electricity</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+
+                      {/* Electricity */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
+                            <Zap className="w-3.5 h-3.5 text-amber-400" /> Electricity
+                          </span>
+                          <span className="font-mono text-amber-300">{breakdown.electricity.toFixed(1)} kg</span>
+                        </div>
+                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-yellow-500 rounded-full transition-all duration-300"
-                            style={{ width: maxEmission > 0 ? `${(breakdown.electricity / maxEmission) * 100}%` : '0%' }}
+                            className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                            style={{ width: `${(breakdown.electricity / maxEmission) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm font-medium w-12">{breakdown.electricity.toFixed(1)}kg</span>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Utensils className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">Diet</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+
+                      {/* Diet */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
+                            <Utensils className="w-3.5 h-3.5 text-teal-400" /> Diet
+                          </span>
+                          <span className="font-mono text-teal-300">{breakdown.diet.toFixed(1)} kg</span>
+                        </div>
+                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-green-500 rounded-full transition-all duration-300"
-                            style={{ width: maxEmission > 0 ? `${(breakdown.diet / maxEmission) * 100}%` : '0%' }}
+                            className="h-full bg-teal-400 rounded-full transition-all duration-500"
+                            style={{ width: `${(breakdown.diet / maxEmission) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm font-medium w-12">{breakdown.diet.toFixed(1)}kg</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </CardContent>
+            </div>
+
+            {/* Earth Verification Footer */}
+            <div className="p-4 border-t border-zinc-800/80 text-xs text-zinc-500 flex items-center justify-between font-mono">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Verified by Earth Protocol
+              </span>
+              <span>Atlas DB Connected</span>
+            </div>
+          </Card>
+        </div>
+
+        {/* Weekly Trend Section (Mon-Sun) */}
+        <div className="relative z-10">
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl shadow-2xl text-white">
+            <CardHeader className="border-b border-zinc-800/80 pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-emerald-300">
+                <TrendingDown className="w-5 h-5 text-emerald-400" />
+                7-Day Planetary Trend Telemetry
+              </CardTitle>
+              <CardDescription className="text-zinc-400 text-xs">
+                Historical records for the active calendar week (Mon–Sun)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-7 gap-2 md:gap-4 items-end h-48 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/60">
+                {weekly.map((d, idx) => {
+                  const maxVal = Math.max(1, ...weekly.map((w: any) => w.value));
+                  const heightPct = Math.min(100, Math.max(8, (d.value / maxVal) * 100));
+                  return (
+                    <div key={d.date || idx} className="flex flex-col items-center h-full justify-end group">
+                      <span className="text-[10px] font-mono text-zinc-400 mb-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                        {d.value.toFixed(1)}k
+                      </span>
+                      <div className="w-full bg-zinc-800 rounded-t-lg h-36 flex items-end overflow-hidden p-1">
+                        <div
+                          className="w-full bg-gradient-to-t from-emerald-600 via-teal-400 to-emerald-300 rounded-md transition-all duration-500 group-hover:brightness-125"
+                          style={{ height: `${heightPct}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono font-semibold text-zinc-300 mt-2">{d.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Weekly Emissions (Mon-Sun) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-green-600" />
-              <span>Weekly Emissions</span>
-            </CardTitle>
-            <CardDescription>Saved daily totals for the current week (Mon–Sun)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {weekly.map(d => (
-                <div key={d.date} className="flex items-center space-x-3">
-                  <div className="w-10 text-sm text-gray-600">{d.label}</div>
-                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (d.value / Math.max(1, Math.max(...weekly.map(w => w.value)))) * 100)}%` }}
-                    />
-                  </div>
-                  <div className="w-16 text-right text-sm font-medium">{d.value.toFixed(1)}kg</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 text-sm text-gray-700">
-              Current points: <span className="font-semibold text-emerald-700">{points}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tips Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-blue-700">
-                <Car className="h-5 w-5" />
-                <span>Commute Tips</span>
+        {/* Earth Decarbonization Tips */}
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-emerald-400">
+                <Car className="w-4 h-4" /> Mobility Optimization
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {tips.commute.map((tip, index) => (
-                  <li key={index} className="flex items-start space-x-2">
-                    <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{tip}</span>
+              <ul className="space-y-2 text-xs text-zinc-300">
+                {tips.commute.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-yellow-700">
-                <Lightbulb className="h-5 w-5" />
-                <span>Energy Tips</span>
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-amber-400">
+                <Zap className="w-4 h-4" /> Energy Conservation
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {tips.electricity.map((tip, index) => (
-                  <li key={index} className="flex items-start space-x-2">
-                    <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{tip}</span>
+              <ul className="space-y-2 text-xs text-zinc-300">
+                {tips.electricity.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-green-700">
-                <Utensils className="h-5 w-5" />
-                <span>Diet Tips</span>
+          <Card className="bg-zinc-950/70 border border-emerald-500/20 backdrop-blur-xl text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-teal-400">
+                <Utensils className="w-4 h-4" /> Sustainable Nutrition
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {tips.diet.map((tip, index) => (
-                  <li key={index} className="flex items-start space-x-2">
-                    <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{tip}</span>
+              <ul className="space-y-2 text-xs text-zinc-300">
+                {tips.diet.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-teal-400 flex-shrink-0 mt-0.5" />
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "@/components/ui/button";
 import { setToken, setUserRole, setUserData } from "@/lib/auth";
 
@@ -12,34 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Leaf } from "lucide-react";
-
-declare global {
-  interface Window {
-    google: {
-      accounts: {
-        id: {
-          initialize: (config: { client_id: string; callback: (response: GoogleResponse) => void }) => void;
-          renderButton: (element: HTMLElement, options: any) => void;
-        };
-      };
-    };
-  }
-}
-
-interface GoogleResponse {
-  credential: string;
-  clientId?: string;
-}
+import { Leaf, ShieldCheck } from "lucide-react";
 
 type UserRoleType = 'user' | 'organizer' | 'ngo';
 
-interface UserData {
-  id: string;
-  email: string;
-  name?: string;
-  role: UserRoleType | 'default';
-}
 const Login = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -47,172 +24,68 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
+  const { loginWithPopup, user: auth0User, isAuthenticated, isLoading: auth0Loading } = useAuth0();
+
   const API_BASE = import.meta.env.VITE_API_BASE || "";
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "22049997057-p6qg64mo1iufr7m8vnhsb5qa9tvg9fq8.apps.googleusercontent.com";
 
-  const handleGoogleResponse = useCallback(async (response: GoogleResponse) => {
-    setIsLoading(true);
-    try {
-      if (!response.credential) {
-        throw new Error('No credential in Google response');
-      }
-
-      // Authenticate with your backend
-      const res = await fetch(`${API_BASE}/api/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          credential: response.credential,
-          role: role
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Authentication failed');
-      }
-
-      const data = await res.json();
-      // Set authentication data
-      setToken(data.token);
-      setUserRole(data.role || role);
-      setUserData({ ...(data.user || {}), role: data.role || role });
-
-      // Redirect based on the role returned by the server or the selected role
-      const redirectRole = data.role || role;
-      let redirectPath = '/dashboard'; // Default for users
-
-      switch (redirectRole) {
-        case 'ngo':
-          redirectPath = '/ngo/dashboard';
-          break;
-        case 'organizer':
-          redirectPath = '/organiser/dashboard';
-          break;
-        default:
-          redirectPath = '/dashboard';
-      }
-
-      navigate(redirectPath);
-      
-    } catch (error) {
-      console.error('Google login error:', error);
-      alert(`Google login failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [API_BASE, navigate, role]);
-
-  const showFallbackButton = useCallback(() => {
-    const googleBtn = document.getElementById("google-login-btn");
-    if (googleBtn) {
-      googleBtn.innerHTML = '';
-      const fallback = document.createElement('button');
-      fallback.type = 'button';
-      fallback.className = 'w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none';
-      fallback.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.5781 9.20508C17.5781 8.56641 17.5208 7.95274 17.4167 7.36328H9V10.8451H13.9062C13.7604 11.9701 13.1528 12.9232 12.1823 13.5592V15.8195H14.901C16.6181 14.2527 17.5781 11.9459 17.5781 9.20508Z" fill="#4285F4"/>
-          <path d="M9 18C11.4302 18 13.4896 17.1946 14.901 15.8195L12.1823 13.5592C11.4236 14.0992 10.4403 14.4205 9 14.4205C6.65903 14.4205 4.67014 12.8374 3.96528 10.71H0.149414V13.0418C1.60851 15.9833 4.96007 18 9 18Z" fill="#34A853"/>
-          <path d="M3.96528 10.71C3.80556 10.17 3.71528 9.59325 3.71528 9C3.71528 8.40675 3.80556 7.83 3.96528 7.29V4.95825H0.149414C-0.0498047 5.66212 -0.166626 6.40275 -0.166626 7.16662C-0.166626 7.9305 -0.0498047 8.67112 0.149414 9.375L3.96528 10.71Z" fill="#FBBC05"/>
-          <path d="M9 3.57955C10.4948 3.57955 11.8236 4.08398 12.8889 5.06719L15.0118 2.94422C13.4861 1.53047 11.4306 0.666626 9 0.666626C4.96007 0.666626 1.60851 2.68331 0.149414 5.62478L3.96528 7.29C4.67014 5.16259 6.65903 3.57955 9 3.57955Z" fill="#EA4335"/>
-        </svg>
-        <span>Continue with Google</span>
-      `;
-      fallback.onclick = () => {
-        if (window.google?.accounts?.id) {
-          window.google.accounts.id.prompt();
-        } else {
-          alert(`Google Sign-In configuration required: Please add "${window.location.origin}" to Authorized JavaScript Origins in your Google Cloud Console for Client ID: ${GOOGLE_CLIENT_ID}`);
-        }
-      };
-      googleBtn.appendChild(fallback);
-    }
-  }, [GOOGLE_CLIENT_ID]);
-
-  const initializeGoogleSignIn = useCallback(() => {
-    try {
-      // Remove any existing Google script to avoid duplicates
-      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      if (existingScript) existingScript.remove();
-
-      if (!window.google || !window.google.accounts) {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          setTimeout(() => initializeGoogleSignIn(), 500);
-        };
-        script.onerror = () => {
-          console.error('Failed to load Google Sign-In script');
-          showFallbackButton();
-        };
-        document.head.appendChild(script);
-        return;
-      }
-
-      if (!GOOGLE_CLIENT_ID) {
-        throw new Error('Google Client ID is not configured');
-      }
-
-      const googleBtn = document.getElementById('google-login-btn');
-      if (googleBtn) {
-        googleBtn.innerHTML = '';
-        try {
-          window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleResponse,
-          });
-          window.google.accounts.id.renderButton(googleBtn, {
-            type: 'standard',
-            theme: 'outline',
-            size: 'large',
-            width: 300,
-            text: 'continue_with',
-            shape: 'rectangular',
-            logo_alignment: 'left',
-          });
-          console.log('Google button rendered.');
-        } catch (error) {
-          console.error('Error rendering Google button:', error);
-          showFallbackButton();
-        }
-      } else {
-        console.error('google-login-btn element not found');
-        showFallbackButton();
-      }
-    } catch (error) {
-      console.error('Unexpected error in Google Sign-In initialization:', error);
-      showFallbackButton();
-    }
-  }, [GOOGLE_CLIENT_ID, handleGoogleResponse, showFallbackButton]);
-
-
-  // Initialize Google Sign-In when component mounts
+  // Sync Auth0 authenticated user with EcoTrackr backend
   useEffect(() => {
-    const timer = setTimeout(() => {
-      initializeGoogleSignIn();
-    }, 100);
+    const syncAuth0User = async () => {
+      if (isAuthenticated && auth0User && auth0User.email) {
+        setIsLoading(true);
+        try {
+          const res = await fetch(`${API_BASE}/api/auth/auth0`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: auth0User.email,
+              name: auth0User.name,
+              picture: auth0User.picture,
+              sub: auth0User.sub,
+              role: role,
+            }),
+          });
 
-    return () => {
-      clearTimeout(timer);
-      // Clean up any Google Sign-In elements
-      const googleButton = document.getElementById('google-login-btn');
-      if (googleButton) {
-        googleButton.innerHTML = '';
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || 'Auth0 authentication failed');
+          }
+
+          const data = await res.json();
+          setToken(data.token);
+          setUserRole(data.role || role);
+          setUserData({ ...(data.user || {}), role: data.role || role });
+
+          const redirectRole = data.role || role;
+          let redirectPath = '/dashboard';
+          if (redirectRole === 'ngo') redirectPath = '/ngo/dashboard';
+          else if (redirectRole === 'organizer') redirectPath = '/organiser/dashboard';
+
+          navigate(redirectPath);
+        } catch (error: any) {
+          console.error("Auth0 login error:", error);
+          alert(`Auth0 Sign-in Error: ${error.message || 'Unknown error'}`);
+        } finally {
+          setIsLoading(false);
+        }
       }
     };
-  }, [initializeGoogleSignIn]);
+    syncAuth0User();
+  }, [isAuthenticated, auth0User, API_BASE, navigate, role]);
 
-  // Normal login handler
+  const handleAuth0SignIn = async () => {
+    try {
+      await loginWithPopup();
+    } catch (err: any) {
+      console.error("Auth0 popup error:", err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Direct API call instead of using useAuth login to get better control over role handling
       const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -221,7 +94,7 @@ const Login = () => {
         body: JSON.stringify({
           email,
           password,
-          role, // Send the selected role to the backend
+          role,
         }),
       });
 
@@ -236,14 +109,12 @@ const Login = () => {
         throw new Error('Authentication failed: No token received');
       }
 
-      // Set authentication data
       setToken(data.token);
       setUserRole(role);
       setUserData({ ...data.user, role });
 
-      // Redirect based on the role returned by the server or the selected role
       const redirectRole = data.role || role;
-      let redirectPath = '/dashboard'; // Default for users
+      let redirectPath = '/dashboard';
 
       switch (redirectRole) {
         case 'ngo':
@@ -256,10 +127,7 @@ const Login = () => {
           redirectPath = '/dashboard';
       }
 
-      console.log("Login success:", { token: data.token, role: data.role, redirectPath });
-
       navigate(redirectPath);
-
     } catch (error) {
       console.error('Login error:', error);
       alert(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -269,27 +137,31 @@ const Login = () => {
   };
 
   return (
-    <div className="bg-login-image flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/10">
+    <div className="bg-login-image flex items-center justify-center min-h-screen p-4">
+      <Card className="w-full max-w-md bg-zinc-950/80 backdrop-blur-xl border border-emerald-500/30 shadow-2xl shadow-emerald-950/50 text-white">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Leaf className="h-8 w-8 leaf-outline" />
-            <span className="text-2xl font-bold text-emerald-50">EcoTrackr</span>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+              <Leaf className="h-7 w-7" />
+            </div>
+            <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-500 bg-clip-text text-transparent">
+              EcoTrackr
+            </span>
           </div>
-          <CardTitle className="text-emerald-50">Welcome Back</CardTitle>
-          <CardDescription className="text-emerald-100/80">Sign in to continue</CardDescription>
+          <CardTitle className="text-xl font-semibold text-white">Welcome Back</CardTitle>
+          <CardDescription className="text-zinc-400">Sign in to track your carbon footprint</CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Role Selector */}
             <div>
-              <Label className="text-emerald-50">Sign in as</Label>
+              <Label className="text-zinc-300 text-xs uppercase tracking-wider font-mono">Sign in as</Label>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant={role === "user" ? "default" : "outline"}
-                  className={role === "user" ? "bg-green-600 hover:bg-green-700" : ""}
+                  className={role === "user" ? "bg-emerald-600 hover:bg-emerald-500 text-white border-0" : "border-zinc-800 text-zinc-300 hover:bg-zinc-900"}
                   onClick={() => setRole("user")}
                 >
                   User
@@ -297,15 +169,15 @@ const Login = () => {
                 <Button
                   type="button"
                   variant={role === "organizer" ? "default" : "outline"}
-                  className={role === "organizer" ? "bg-purple-600 hover:bg-purple-700" : ""}
+                  className={role === "organizer" ? "bg-purple-600 hover:bg-purple-500 text-white border-0" : "border-zinc-800 text-zinc-300 hover:bg-zinc-900"}
                   onClick={() => setRole("organizer")}
                 >
-                  Event Organizer
+                  Organizer
                 </Button>
                 <Button
                   type="button"
                   variant={role === "ngo" ? "default" : "outline"}
-                  className={role === "ngo" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                  className={role === "ngo" ? "bg-blue-600 hover:bg-blue-500 text-white border-0" : "border-zinc-800 text-zinc-300 hover:bg-zinc-900"}
                   onClick={() => setRole("ngo")}
                 >
                   NGO
@@ -313,46 +185,61 @@ const Login = () => {
               </div>
             </div>
 
-            <Label className="text-emerald-50">Email</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <Label className="text-emerald-50">Password</Label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div>
+              <Label className="text-zinc-300 text-xs">Email</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@domain.com"
+                className="bg-zinc-900/90 border-zinc-800 text-white focus:border-emerald-500 placeholder:text-zinc-600"
+                required
+              />
+            </div>
+            <div>
+              <Label className="text-zinc-300 text-xs">Password</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="bg-zinc-900/90 border-zinc-800 text-white focus:border-emerald-500"
+                required
+              />
+            </div>
             <Button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700"
-              disabled={isLoading}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold transition-all duration-200"
+              disabled={isLoading || auth0Loading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 
           {/* Divider */}
-          <div className="my-4 flex items-center">
-            <div className="flex-grow h-px bg-gray-300"></div>
-            <span className="px-2 text-gray-500 text-sm">or</span>
-            <div className="flex-grow h-px bg-gray-300"></div>
+          <div className="my-5 flex items-center">
+            <div className="flex-grow h-px bg-zinc-800"></div>
+            <span className="px-3 text-zinc-500 text-xs uppercase tracking-widest font-mono">or</span>
+            <div className="flex-grow h-px bg-zinc-800"></div>
           </div>
 
-
-          {/* Google Login Button - let Google render here */}
-          <div id="google-login-btn" className="w-full flex items-center justify-center my-2"></div>
+          {/* Auth0 Login Button */}
+          <Button
+            type="button"
+            onClick={handleAuth0SignIn}
+            disabled={isLoading || auth0Loading}
+            className="w-full bg-zinc-900 border border-zinc-700 hover:border-emerald-500/50 hover:bg-zinc-800 text-white font-medium flex items-center justify-center gap-2 py-2.5 transition-all duration-200"
+          >
+            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            <span>Continue with Auth0</span>
+          </Button>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-emerald-100/80">
+            <p className="text-sm text-zinc-400">
               Don't have an account?{" "}
               <Link
                 to="/signup"
-                className="text-green-400 hover:text-green-300"
+                className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
               >
                 Sign up
               </Link>
