@@ -156,7 +156,11 @@ app.get("*", (req, res, next) => {
     return next();
   }
 
-  res.sendFile(path.join(frontendPath, "index.html"));
+  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+    if (err && !res.headersSent) {
+      res.status(404).send("EcoTrack: Application build file index.html not found. Please run npm run build.");
+    }
+  });
 });
 
 // --------------------

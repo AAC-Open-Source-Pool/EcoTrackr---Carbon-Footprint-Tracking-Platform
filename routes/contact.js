@@ -38,7 +38,7 @@ router.post('/submit', async (req, res) => {
     // Send email or SMS based on type
     if (type === 'email') {
       // Configure nodemailer transporter
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER,

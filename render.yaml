@@ -7,3 +7,17 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20.x
+      - key: MONGODB_URI
+        value: mongodb+srv://kamatalaakshithguptha2006_db_user:fV1LUUV4tArJvehF@cluster0.4vgii5m.mongodb.net/ecotrack?retryWrites=true&w=majority
+      - key: JWT_SECRET
+        value: ecotrack_jwt_secret_key_2026
+      - key: ISSUER_BASE_URL
+        value: https://dev-4fy07vc2iti7f4go.us.auth0.com
+      - key: CLIENT_ID
+        value: j6h2Ua2hbmyeyI5ZgzN6LwHzS6YkRU3B
+      - key: SECRET
+        value: f3b4362858b34e1518ca41e375c9748fe38a7923950857cddd3ae047daff5670
+      - key: VITE_AUTH0_DOMAIN
+        value: dev-4fy07vc2iti7f4go.us.auth0.com
+      - key: VITE_AUTH0_CLIENT_ID
+        value: j6h2Ua2hbmyeyI5ZgzN6LwHzS6YkRU3B
