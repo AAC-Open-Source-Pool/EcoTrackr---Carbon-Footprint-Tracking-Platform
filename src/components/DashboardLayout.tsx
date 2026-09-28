@@ -47,7 +47,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const res = await authFetch("http://localhost:5000/api/profile");
+        const res = await authFetch("/api/profile");
         const data = await res.json();
         setDisplayName(data.username || data.email || "");
         if (data._id) setUserId(String(data._id));

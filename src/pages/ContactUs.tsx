@@ -43,7 +43,7 @@ const ContactUs = () => {
     }
 
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+      const API_BASE = import.meta.env.VITE_API_BASE || '';
       const response = await authFetch(`${API_BASE}/api/contact/submit`, {
         method: 'POST',
         body: JSON.stringify(formData)

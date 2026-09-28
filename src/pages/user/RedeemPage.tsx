@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { ShoppingBag, Leaf, Droplets, Recycle, Sun, ExternalLink, DollarSign } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface Product {
   id: string;

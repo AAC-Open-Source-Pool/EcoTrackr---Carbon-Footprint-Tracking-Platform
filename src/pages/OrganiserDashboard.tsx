@@ -46,7 +46,7 @@ const OrganiserEventForm = () => {
     try {
       setUploading(true);
       const dataUrl = await readFileAsDataUrl(file);
-      const res = await authFetch("http://localhost:5000/api/uploads", {
+      const res = await authFetch("/api/uploads", {
         method: "POST",
         body: JSON.stringify({ data: dataUrl, filename: file.name }),
       });
@@ -100,7 +100,7 @@ const OrganiserEventForm = () => {
         image: form.image.trim(),
         photos: Array.isArray(form.photos) ? form.photos : [],
       };
-      const res = await authFetch("http://localhost:5000/api/events", {
+      const res = await authFetch("/api/events", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -113,7 +113,7 @@ const OrganiserEventForm = () => {
       toast({ title: "Event Created", description: "Your event is now visible on the Events page.", className: "bg-green-50 border-green-200" });
       // Prune previous events, keep only the most recent one
       try {
-        const pruneRes = await authFetch("http://localhost:5000/api/events/mine/prune", { method: "DELETE" });
+        const pruneRes = await authFetch("/api/events/mine/prune", { method: "DELETE" });
         const pruneData = await pruneRes.json().catch(() => ({}));
         if (pruneRes.ok && pruneData?.deleted >= 0) {
           // Optional: toast summary

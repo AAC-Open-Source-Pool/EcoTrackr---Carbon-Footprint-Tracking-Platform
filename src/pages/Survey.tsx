@@ -6,7 +6,7 @@ export default function Survey() {
 
   const fetchSurvey = async () => {
     setLoading(true);
-    const res = await fetch("http://localhost:5000/api/survey/generate", {
+    const res = await fetch("/api/surveys/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic: "daily lifestyle habits" }),

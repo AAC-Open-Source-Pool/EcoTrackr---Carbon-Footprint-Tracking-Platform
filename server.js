@@ -80,6 +80,13 @@ if (!mongoURI) {
 }
 
 // --------------------
+// Health check route
+// --------------------
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// --------------------
 // API routes
 // --------------------
 app.use("/api/auth", authRoutes);
@@ -89,6 +96,7 @@ app.use("/api/carbon", carbonRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/surveys", surveyRoutes);
+app.use("/api/survey", surveyRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/ngo", ngoRoutes);
 app.use("/api/products", productsRoutes);

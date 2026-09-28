@@ -15,6 +15,20 @@ router.post("/", async (req, res) => {
     const { data, filename } = req.body || {};
     if (!data) return res.status(400).json({ message: "Missing data" });
 
+    // Optional Cloudinary integration if credentials are present
+    if (process.env.CLOUDINARY_URL) {
+      try {
+        const { v2: cloudinary } = await import("cloudinary");
+        cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL });
+        const uploadRes = await cloudinary.uploader.upload(data, {
+          folder: "ecotrackr_uploads",
+        });
+        return res.json({ url: uploadRes.secure_url });
+      } catch (cloudErr) {
+        console.warn("Cloudinary upload failed, falling back to local storage:", cloudErr.message);
+      }
+    }
+
     let base64 = data;
     const match = /^data:(.*?);base64,(.*)$/.exec(data);
     if (match) {

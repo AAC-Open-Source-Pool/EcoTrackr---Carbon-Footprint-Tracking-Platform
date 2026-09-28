@@ -10,7 +10,7 @@ import { authFetch, useAuth } from "@/lib/auth";
 
 // Helper component to render event image (supports uploaded path like '/uploads/3.png')
 const EventImage = ({ src, alt, onClick }: { src: string; alt?: string; onClick?: () => void }) => {
-  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+  const API_BASE = import.meta.env.VITE_API_BASE || '';
   if (!src) return <div className="text-4xl">📅</div>;
 
   const s = String(src).trim();
@@ -70,7 +70,7 @@ const Events = () => {
       setLoading(true);
       try {
         // Load all events
-        const res = await fetch("http://localhost:5000/api/events");
+        const res = await fetch("/api/events");
         const data = await res.json();
         if (Array.isArray(data)) {
           // Normalize to UI shape
@@ -98,7 +98,7 @@ const Events = () => {
 
         // Load user's registered events
         try {
-          const registeredRes = await authFetch("http://localhost:5000/api/events/my-registered");
+          const registeredRes = await authFetch("/api/events/my-registered");
           if (registeredRes.ok) {
             const registeredData = await registeredRes.json();
             if (Array.isArray(registeredData)) {
@@ -130,7 +130,7 @@ const Events = () => {
 
   const handleRegisterEvent = async (eventId: string) => {
     try {
-      const res = await authFetch(`http://localhost:5000/api/events/${eventId}/join`, {
+      const res = await authFetch(`/api/events/${eventId}/join`, {
         method: "POST",
       });
       const data = await res.json().catch(() => ({}));
@@ -163,7 +163,7 @@ const Events = () => {
   const handleDownloadPdf = async (event: any) => {
     setPdfLoading(true);
     try {
-      const res = await authFetch(`http://localhost:5000/api/events/${event.id}/download-pdf`);
+      const res = await authFetch(`/api/events/${event.id}/download-pdf`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const message = data && (data.message || data.error) ? (data.message || data.error) : `HTTP ${res.status}`;
@@ -192,7 +192,7 @@ const Events = () => {
   const handleDownloadCalendar = async (event: any) => {
     setCalendarLoading(true);
     try {
-      const res = await authFetch(`http://localhost:5000/api/events/${event.id}/download-calendar`);
+      const res = await authFetch(`/api/events/${event.id}/download-calendar`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const message = data && (data.message || data.error) ? (data.message || data.error) : `HTTP ${res.status}`;
@@ -346,7 +346,7 @@ const Events = () => {
                         setPhotoIndex(0);
                         setPhotoModalOpen(true);
                         try {
-                          const res = await fetch(`http://localhost:5000/api/events/${event.id}/photos`);
+                          const res = await fetch(`/api/events/${event.id}/photos`);
                           if (res.ok) {
                             const data = await res.json();
                             if (Array.isArray(data)) setPhotoList(data);
@@ -504,7 +504,7 @@ const Events = () => {
                         </div>
                           <Button variant="outline" className="text-red-600 w-full sm:w-auto whitespace-nowrap min-w-[160px]" onClick={async () => {
                           try {
-                            const res = await authFetch(`http://localhost:5000/api/events/${event.id}/leave`, { method: 'POST' });
+                            const res = await authFetch(`/api/events/${event.id}/leave`, { method: 'POST' });
                             const data = await res.json().catch(()=>({}));
                             if (!res.ok) {
                               toast({ title: 'Cancel failed', description: data.message || `HTTP ${res.status}`, variant: 'destructive' });
@@ -696,7 +696,7 @@ const Events = () => {
                   ◀
                 </Button>
                 <div className="flex-1">
-                  <img src={photoList[photoIndex].startsWith('/') ? `${import.meta.env.VITE_API_BASE || 'http://localhost:5000'}${photoList[photoIndex]}` : photoList[photoIndex]} alt={`photo-${photoIndex}`} className="w-full h-96 object-contain" />
+                  <img src={photoList[photoIndex].startsWith('/') ? `${import.meta.env.VITE_API_BASE || ''}${photoList[photoIndex]}` : photoList[photoIndex]} alt={`photo-${photoIndex}`} className="w-full h-96 object-contain" />
                 </div>
                 <Button variant="ghost" onClick={() => setPhotoIndex(i => Math.min(photoList.length - 1, i+1))} disabled={photoIndex >= photoList.length - 1}>
                   ▶

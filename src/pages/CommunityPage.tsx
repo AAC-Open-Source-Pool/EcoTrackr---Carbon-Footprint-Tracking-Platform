@@ -41,7 +41,7 @@ const CommunityPage = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/community/leaderboard");
+        const response = await fetch("/api/community/leaderboard");
         if (response.ok) {
           const data = await response.json();
           setLeaderboardData(data);
@@ -109,7 +109,7 @@ const CommunityPage = () => {
       }
 
       // Get user profile
-      const profileRes = await fetch("http://localhost:5000/api/profile", {
+      const profileRes = await fetch("/api/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -123,7 +123,7 @@ const CommunityPage = () => {
       setMyUserId(userId);
 
       // Fetch posts for the current user
-      const postsRes = await fetch(`http://localhost:5000/api/community?userId=${userId}`, {
+      const postsRes = await fetch(`/api/community?userId=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store' // Prevent caching to always get fresh data
       });
@@ -212,7 +212,7 @@ const CommunityPage = () => {
     if (!newPost.trim()) return;
     try {
       setIsPosting(true);
-      const res = await authFetch("http://localhost:5000/api/community", {
+      const res = await authFetch("/api/community", {
         method: "POST",
         body: JSON.stringify({ content: newPost }),
       });
@@ -239,7 +239,7 @@ const CommunityPage = () => {
   // 🔹 Like a post (toggle)
   const handleLike = async (postId: string) => {
     try {
-      const res = await authFetch(`http://localhost:5000/api/community/${postId}/like`, { method: "POST" });
+      const res = await authFetch(`/api/community/${postId}/like`, { method: "POST" });
       if (!res.ok) {
         console.error('Like failed', await res.text().catch(() => '')); return;
       }
@@ -259,7 +259,7 @@ const CommunityPage = () => {
   const handleComment = async (postId: string, text: string) => {
     if (!text.trim()) return;
     try {
-      const res = await authFetch(`http://localhost:5000/api/community/${postId}/comment`, {
+      const res = await authFetch(`/api/community/${postId}/comment`, {
         method: 'POST',
         body: JSON.stringify({ text }),
       });
@@ -279,7 +279,7 @@ const CommunityPage = () => {
     }
 
     try {
-      const res = await authFetch(`http://localhost:5000/api/community/${postId}`, { 
+      const res = await authFetch(`/api/community/${postId}`, { 
         method: "DELETE" 
       });
       

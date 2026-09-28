@@ -46,7 +46,7 @@ const Profile = () => {
     let mounted = true;
     const fetchProfile = async () => {
       try {
-        const res = await authFetch("http://localhost:5000/api/profile");
+        const res = await authFetch("/api/profile");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!mounted) return;
@@ -118,7 +118,7 @@ const Profile = () => {
   const handleUpdateProfile = async () => {
     try {
       const res = await authFetch(
-        "http://localhost:5000/api/profile",
+        "/api/profile",
         {
           method: "PUT",
           body: JSON.stringify({
@@ -151,7 +151,7 @@ const Profile = () => {
   const handleAddGoal = async () => {
     try {
       if (!newGoal.title) return;
-      const res = await authFetch("http://localhost:5000/api/profile/goals", {
+      const res = await authFetch("/api/profile/goals", {
         method: "POST",
         body: JSON.stringify(newGoal),
       });
