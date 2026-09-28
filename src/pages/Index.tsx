@@ -87,14 +87,14 @@ const Index = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3 group">
             <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/40 p-[2px] flex items-center justify-center text-emerald-400 group-hover:border-emerald-400 transition-all">
-              <Globe className="h-5 w-5" />
+              <Leaf className="h-5 w-5 text-emerald-400" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-black tracking-widest font-mono uppercase bg-gradient-to-r from-white via-emerald-100 to-teal-300 bg-clip-text text-transparent">
-                EARTH INC.
+              <span className="text-xl font-black tracking-widest font-mono uppercase bg-gradient-to-r from-white via-emerald-100 to-teal-300 bg-clip-text text-transparent">
+                ECOTRACK
               </span>
               <span className="text-[9px] font-mono text-emerald-400/80 -mt-1 tracking-wider uppercase">
-                EcoTrackr Protocol
+                Planetary Decarbonization Protocol
               </span>
             </div>
           </Link>
@@ -148,23 +148,23 @@ const Index = () => {
         )}
       </header>
 
-      {/* Hero Mission Statement Section (Igloo.inc Style) */}
+      {/* Hero Mission Statement Section (Igloo.inc Style with ECOTRACK name) */}
       <section className="relative z-10 pt-20 pb-16 px-4 sm:px-8 max-w-7xl mx-auto text-center space-y-8">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono tracking-widest uppercase backdrop-blur-md">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          EARTH INC. // PLANETARY DECARBONIZATION PROTOCOL
+          ECOTRACK // PLANETARY DECARBONIZATION PROTOCOL
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tight leading-[1.05] max-w-5xl mx-auto">
           OUR MISSION IS TO CREATE THE LARGEST{" "}
           <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-400 bg-clip-text text-transparent">
-            EARTH COMMUNITY
+            ECOTRACK COMMUNITY
           </span>
           , DRIVING THE CONSUMER SUSTAINABILITY REVOLUTION.
         </h1>
 
         <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto font-sans">
-          EcoTrackr empowers individuals, NGOs, and enterprises with real-time carbon telemetry, automated rewards, and geospatial eco-infrastructure.
+          EcoTrack empowers individuals, NGOs, and enterprises with real-time carbon telemetry, automated rewards, and geospatial eco-infrastructure.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -203,7 +203,7 @@ const Index = () => {
           <div>
             <div className="text-xs font-mono uppercase text-emerald-400 tracking-widest mb-2">// ECOSYSTEM COMPONENTS</div>
             <h2 className="text-3xl sm:text-5xl font-extrabold uppercase tracking-tight text-white">
-              The Earth Infrastructure
+              The EcoTrack Infrastructure
             </h2>
           </div>
           <p className="text-zinc-400 text-sm max-w-md">
@@ -375,7 +375,7 @@ const Index = () => {
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4 font-mono text-xs text-zinc-400">
                 <span className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  protocol://earth.inc/dashboard
+                  protocol://ecotrack.app/dashboard
                 </span>
                 <span>STATUS: ACTIVE</span>
               </div>
@@ -428,7 +428,7 @@ const Index = () => {
         <div className="bg-gradient-to-r from-emerald-950/80 via-zinc-950 to-teal-950/80 border border-emerald-500/40 rounded-3xl p-10 text-center space-y-6 backdrop-blur-2xl shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />
           <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white max-w-3xl mx-auto">
-            Ready to Join the Earth Sustainability Revolution?
+            Ready to Join the EcoTrack Sustainability Revolution?
           </h2>
           <p className="text-zinc-400 text-sm max-w-xl mx-auto font-sans">
             Start tracking your daily footprint, earn rewards, and contribute to global decarbonization today.
@@ -452,10 +452,10 @@ const Index = () => {
       <footer className="relative z-10 py-8 border-t border-emerald-500/20 text-center font-mono text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-emerald-400" />
-            <span className="text-zinc-300 font-bold">EARTH INC. // ECOTRACKR PROTOCOL</span>
+            <Leaf className="w-4 h-4 text-emerald-400" />
+            <span className="text-zinc-300 font-bold">ECOTRACK PROTOCOL</span>
           </div>
-          <div>© 2026 Earth Inc. All rights reserved. Planetary Decarbonization System.</div>
+          <div>© 2026 EcoTrack Inc. All rights reserved. Planetary Decarbonization System.</div>
         </div>
       </footer>
     </div>

@@ -145,7 +145,7 @@ const Login = () => {
               <Leaf className="h-7 w-7" />
             </div>
             <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-500 bg-clip-text text-transparent">
-              EcoTrackr
+              EcoTrack
             </span>
           </div>
           <CardTitle className="text-xl font-semibold text-white">Welcome Back</CardTitle>
