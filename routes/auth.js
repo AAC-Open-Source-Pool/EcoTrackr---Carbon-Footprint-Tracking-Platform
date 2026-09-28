@@ -24,7 +24,8 @@ router.post("/register", async (req, res) => {
     await user.save();
 
     const payload = { user: { id: user._id } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const jwtSecret = process.env.JWT_SECRET || "ecotrack_jwt_secret_key_2026";
+    const token = jwt.sign(payload, jwtSecret, { expiresIn: "7d" });
 
     res.json({ token, userId: user._id, email: user.email, role: user.role });
   } catch (err) {
@@ -45,7 +46,8 @@ router.post("/login", async (req, res) => {
       if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
       const payload = { user: { id: user._id } };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+      const jwtSecret = process.env.JWT_SECRET || "ecotrack_jwt_secret_key_2026";
+      const token = jwt.sign(payload, jwtSecret, { expiresIn: "7d" });
 
       return res.json({
         token,
@@ -70,7 +72,8 @@ if (ngo) {
 
   // ✅ FIXED PAYLOAD
   const payload = { ngo: { id: ngo._id } };
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const jwtSecret = process.env.JWT_SECRET || "ecotrack_jwt_secret_key_2026";
+  const token = jwt.sign(payload, jwtSecret, { expiresIn: "7d" });
 
   return res.json({
     token,
