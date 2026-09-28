@@ -90,8 +90,19 @@
     @apply border-border;
   }
 
-  body {
+  /* Hide scrollbar for Chrome, Safari, Opera, Edge, Firefox while maintaining scrollability */
+  html, body {
     @apply bg-background text-foreground font-sans;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 }
 
