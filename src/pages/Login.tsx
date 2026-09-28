@@ -24,7 +24,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  const { loginWithPopup, user: auth0User, isAuthenticated, isLoading: auth0Loading } = useAuth0();
+  const { loginWithPopup, loginWithRedirect, user: auth0User, isAuthenticated, isLoading: auth0Loading } = useAuth0();
 
   const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -74,17 +74,16 @@ const Login = () => {
   }, [isAuthenticated, auth0User, API_BASE, navigate, role]);
 
   const handleAuth0SignIn = async () => {
-    const domain = import.meta.env.VITE_AUTH0_DOMAIN;
-    const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
-    if (!domain || !clientId || domain.includes('your-tenant') || clientId.includes('your_auth0_client_id')) {
-      alert("⚠️ Auth0 Credentials Missing or Unconfigured!\n\nTo enable Auth0 login:\n1. Create a free Auth0 application at https://auth0.com\n2. Add VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID to your .env file.\n3. Add http://localhost:5173 to Allowed Callback URLs in your Auth0 Application Settings.");
-      return;
-    }
     try {
       await loginWithPopup();
-    } catch (err: any) {
-      console.error("Auth0 popup error:", err);
-      alert(`Auth0 Error: ${err.message || 'Popup blocked or failed to open'}`);
+    } catch (popupErr: any) {
+      console.warn("Auth0 popup failed/blocked, trying redirect:", popupErr);
+      try {
+        await loginWithRedirect();
+      } catch (redirectErr: any) {
+        console.warn("Auth0 client redirect failed, trying server endpoint:", redirectErr);
+        window.location.href = `${API_BASE}/login`;
+      }
     }
   };
 

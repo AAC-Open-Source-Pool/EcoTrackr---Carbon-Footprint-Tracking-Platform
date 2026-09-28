@@ -63,6 +63,7 @@
     "ejs": "^3.1.10",
     "embla-carousel-react": "^8.3.0",
     "express": "^4.21.2",
+    "express-openid-connect": "^3.4.0",
     "firebase": "^12.2.1",
     "framer-motion": "^13.4.4",
     "google-auth-library": "^10.3.0",
