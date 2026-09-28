@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Leaf, Menu, X, User as UserIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getToken, getUserRole, removeToken } from "@/lib/auth";
+import { getToken, getUserRole, clearToken } from "@/lib/auth";
 
 export const EcoTrackNavbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,7 +33,7 @@ export const EcoTrackNavbar: React.FC = () => {
   ];
 
   const handleLogout = () => {
-    removeToken();
+    clearToken();
     window.location.href = "/login";
   };
 

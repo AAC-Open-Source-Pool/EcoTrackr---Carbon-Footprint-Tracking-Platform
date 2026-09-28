@@ -24,6 +24,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { DigitalEarth } from "@/components/Earth/DigitalEarth";
+import { EarthScene } from "@/components/Earth/EarthScene";
 import { Reveal } from "@/components/Motion/Reveal";
 import { AnimatedNumber } from "@/components/Motion/AnimatedNumber";
 import { EcoTrackNavbar } from "@/components/Navigation/EcoTrackNavbar";
@@ -73,8 +74,8 @@ const Index = () => {
         </Reveal>
 
         {/* 3D WebGL Digital Earth Centerpiece */}
-        <Reveal direction="none" delay={0.3} className="my-8 w-full flex justify-center">
-          <DigitalEarth size="fullscreen" className="max-w-[550px] h-[450px]" scrollDriven />
+        <Reveal direction="none" delay={0.3} className="my-6 w-full flex justify-center">
+          <EarthScene carbonLevel={estimatedCo2} ecoPoints={250} className="w-full max-w-[600px] h-[480px]" />
         </Reveal>
 
         <Reveal direction="up" delay={0.4}>
