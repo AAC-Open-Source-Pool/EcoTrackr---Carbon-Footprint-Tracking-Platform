@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.js";
 import googleAuthRouter from "./routes/google.js";
+import auth0AuthRouter from "./routes/auth0.js";
 import profileRoutes from "./routes/profile.js";
 import carbonRoutes from "./routes/carbon.js";
 import postsRoutes from "./routes/posts.js";
@@ -91,6 +92,7 @@ app.get("/health", (req, res) => {
 // --------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/auth/google", googleAuthRouter);
+app.use("/api/auth/auth0", auth0AuthRouter);
 app.use("/api/profile", profileRoutes);
 app.use("/api/carbon", carbonRoutes);
 app.use("/api/posts", postsRoutes);
