@@ -23,6 +23,7 @@ import MyRegistrations from "./pages/MyRegistrations";
 import AboutUsPage from "./pages/AboutUsPage";
 import CreateEvent from "./pages/organiser/CreateEvent";
 import Profile from "./pages/Profile";
+import Impact from "./pages/Impact";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 import ContactUs from "./pages/ContactUs";
@@ -160,6 +161,14 @@ const App = () => {
                     <ProtectedRoute>
                       <RoleRoute roles={['user']}>
                         <Rewards />
+                      </RoleRoute>
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="/impact" element={
+                    <ProtectedRoute>
+                      <RoleRoute roles={['user']}>
+                        <Impact />
                       </RoleRoute>
                     </ProtectedRoute>
                   } />
